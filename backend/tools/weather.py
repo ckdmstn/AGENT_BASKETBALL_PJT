@@ -69,7 +69,7 @@ def get_weather(args: WeatherInput, settings: Settings):
         values = {r['category']: r['fcstValue'] for r in matching}
         if not any(k in values for k in ('TMP', 'POP', 'PCP')):
             return failure('MISSING_FIELD', '대상 시각의 날씨 필드가 없습니다.', meta)
-        weather = Weather(forecast_at=base, temperature_c=values.get('TMP'),
+        weather = Weather(forecast_at=target, issued_at=base, temperature_c=values.get('TMP'),
                           precipitation_probability_pct=values.get('POP'),
                           precipitation_mm=values.get('PCP'), available=True)
     except (KeyError, TypeError, ValueError, ValidationError):

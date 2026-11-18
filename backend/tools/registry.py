@@ -77,4 +77,4 @@ def invoke(name: str, arguments: dict, settings: Settings | None = None):
         return result_adapter(tool).validate_python(safe_result)
     except Exception:
         # Isolate one tool's unexpected error; never serialize its exception.
-        return failure('UPSTREAM_ERROR', 'Tool 처리 중 오류가 발생했습니다.', ToolMeta(source='registry'))
+        return failure('INTERNAL_ERROR', 'Tool 내부 처리 중 오류가 발생했습니다.', ToolMeta(source='registry'))

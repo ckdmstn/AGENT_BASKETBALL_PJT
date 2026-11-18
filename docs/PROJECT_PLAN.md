@@ -1,8 +1,8 @@
 # KBL GO — AI 한국프로농구 직관 플래너
 
-> 상태: **설계 초안 v0.1 / 외부 API 실측 검증 전**  
+> 상태: **설계 초안 v0.1 / 외부 API 정상 호출 실측 완료, 정책·경계 검증 진행 중**
 > 기준: `AI코어프로젝트_3회차_요구사항정의서.pdf` (필수 F3001~F3019, 비기능 NF3001~NF3007)  
-> 원칙: 명세서의 필수 항목을 우선하며, 과제 도메인 표현만 KBL로 변경한다. 이 문서에 기재된 외부 API 결과는 이번 검토에서 재호출하여 입증하지 않았다.
+> 원칙: 명세서의 필수 항목을 우선하며, 과제 도메인 표현만 KBL로 변경한다. API 실측 및 회귀 테스트 이력은 `VERIFICATION.md`에서 구분한다.
 
 ## 1. 프로젝트 개요와 목표
 
@@ -98,14 +98,16 @@ Edge: START→analyze→plan→(tasks 빈 경우 respond, 아니면 execute_tool
 
 ## 7. Tool 정의와 실패 계약
 
-공통 결과: `{"ok":true,"data":{},"meta":{"source":"...","requested_at":"...","actual_query":"..."}}` 또는 `{"ok":false,"error":{"code":"...","message":"..."},"meta":{...}}`. Tool은 raw traceback/API key를 반환하지 않는다. 실패 코드: `INVALID_INPUT`, `MISSING_API_KEY`, `UPSTREAM_ERROR`, `TIMEOUT`, `NO_RESULT`, `UNSUPPORTED_DATE`, `MISSING_FIELD`.
+공통 결과: `{"ok":true,"data":{},"meta":{"source":"...","requested_at":"...","actual_query":"..."}}` 또는 `{"ok":false,"error":{"code":"...","message":"..."},"meta":{...}}`. Tool은 raw traceback/API key를 반환하지 않는다. 실패 코드: `INVALID_INPUT`, `MISSING_API_KEY`, `UPSTREAM_ERROR`, `TIMEOUT`, `NO_RESULT`, `UNSUPPORTED_DATE`, `MISSING_FIELD`, `INTERNAL_ERROR`. 외부 HTTP·연결·서비스 실패는 `UPSTREAM_ERROR`, 예상하지 못한 내부 예외·출력 계약 위반은 `INTERNAL_ERROR`로 구분한다.
 
 | Tool | 사용 시점 / 입력 | 정규화된 출력 |
 |---|---|---|
 | `search_kbl_games` | 일정 후보가 필요할 때; `from_date`, `to_date`, `team_code?` | `[{match_id, home_team, away_team, start_at?, venue_name?, source}]`, 실제 조회 기준 |
 | `get_kbl_game_detail` | 후보 `match_id`로 상세 속성 확인; `match_id`, `date?` | `match_id, start_at?, home_team?, away_team?, venue_name?, status?` (확인된 값만) |
 | `search_arena` | 경기장 이름/주소 확인; `venue_name`, `region_hint?` | `name, road_address?, address?, lat?, lon?, place_url?` 또는 NO_RESULT |
-| `get_weather` | 경기 일정·위치가 확인되고 예보 가능할 때; `date_time`, `lat`, `lon` | `forecast_at, temperature_c?, precipitation_probability_pct?, precipitation_mm?, available` |
+| `get_weather` | 경기 일정·위치가 확인되고 예보 가능할 때; `date_time`, `lat`, `lon` | `forecast_at, issued_at, temperature_c?, precipitation_probability_pct?, precipitation_mm?, available` |
+
+날씨 정책: `forecast_at`은 요청을 KST로 변환 후 분 이하를 내린 실제 예보 대상 정시, `issued_at`은 조회 발표 기준시각이다. `available=true`는 TMP/POP/PCP 중 하나 이상 제공됨을 뜻하며 조건 통과가 아니다. 강수확률 null은 미확인이므로 0%로 대체하거나 다른 필드로 강수확률 조건 충족을 추정하지 않는다. 기온 등 제공된 데이터는 보존한다. 사용자 임계값 판정은 DAY 2 Agent 범위다.
 
 KBL 목록과 상세정보를 같은 공식적으로 확인된 호출 경로에서 가져올 수 있다면 **서로 다른 Tool의 입력/출력과 후보 ID 전달**을 반드시 입증한다. API가 진짜 상세 조회를 지원하지 않는다면 F3003 대응을 설계 변경으로 명시하며, 임의로 상세 호출 성공을 주장하지 않는다. 기상청은 예보 기준시각·격자 좌표 변환(nx, ny)·예보 제공 범위를 엄격히 검증해야 한다. 카카오가 장소명만 유사한 결과를 줘도 실제 KBL 경기장으로 검증 없이 확정하지 않는다. 경기장 이름-주소의 보조 목록은 **공식 정보로 대조하고 출처 기록** 후 사용한다.
 
@@ -115,7 +117,7 @@ KBL 목록과 상세정보를 같은 공식적으로 확인된 호출 경로에�
 - Kakao Local: `https://dapi.kakao.com/v2/local/search/keyword.json`, `Authorization: KakaoAK <key>`.
 - KMA: 공공데이터포털 데이터 ID `15084084`, `getVilageFcst` (serviceKey, base_date, base_time, nx, ny 등). 실제 엔드포인트/서비스키 인코딩은 실측 확인.
 - 날씨 예보 범위를 벗어나면 "예보 제공 범위 밖"으로 표시하고 경기 추천 자체와 분리한다.
-- `.env` 예시 키 이름만 `.env.example`에 기재. `.env`, SQLite DB, `.venv`, 캐시, 로그 원본은 `.gitignore`에 추가.
+- 사용자 결정에 따라 `.env.example` 없이 로컬 `.env`를 직접 사용한다. 변수명은 README에 안내하며 실제 값은 공유하지 않는다. `.env`, SQLite DB, `.venv`, 캐시, 로그 원본은 `.gitignore`에 추가.
 - 각 API 출처·이용 조건·호출 한도·검증 일자를 README의 표에 기록(실제 확인값만 기입).
 
 ## 8. DB 및 로깅 설계
@@ -150,7 +152,7 @@ SQLite 테이블:
 
 ```text
 kbl-go/
-  .env.example
+  .env                         # 로컬 전용, Git 제외
   .gitignore
   requirements.txt
   README.md
@@ -196,7 +198,7 @@ kbl-go/
 ## 11. 3일 일정과 게이트
 
 ### DAY 1 — 명세/외부 API/계약
-1. 프로젝트 골격, `.env.example`, 의존성, 문서/간단한 테스트 환경.
+1. 프로젝트 골격, 로컬 `.env` 설정, 의존성, 문서/간단한 테스트 환경.
 2. **최우선: 16시 이전 3개 외부 API 각각 실측 호출**(사용자 측 로컬 키 사용), 응답 필드/호출 한도/이용 약관 확인. KBL의 식별자→상세정보 연결과 기상청 예보 가능 범위를 반드시 검증.
 3. 정규화 Tool 4개 및 실패 계약 테스트, `GET /api/health`, `/docs`, Tool 단독 테스트.
 4. 상세 호출 불가능 등 실측 결과에 따라 `PROJECT_PLAN.md`, `TOOL_SPEC.md` 수정 후 구현 진행 여부 결정.
@@ -236,8 +238,8 @@ kbl-go/
 
 ## 14. 현재 미확인 사항(중요)
 
-1. KBL 비공식 API가 안정적으로 제공하는 **식별자·상세정보 경로 및 구장·시각 필드**.
-2. 카카오/기상청 인증 키와 호출 한도·약관·응답 필드의 현재 유효성.
+1. KBL 식별자·상세 경로·구장·시각 필드는 정상 실측했다. 장기 안정성·사용 허가·대회 선택 정책은 미확인이다.
+2. 카카오/기상청 정상 인증·응답 필드는 실측했다. 호출 한도·이용 조건·인증 실패 응답의 실제 형태는 미확인이다.
 3. KMA 미래 예보 가능 범위가 사용자 요청 날짜를 포함하는지.
 4. 이번 ZIP 안의 기존 RAG는 `src/rag/graph.py`와 `src/vectorstore/store.py` 등을 포함하지만 **현재 MVP 구현에 통합하지 않는다**.
 
@@ -245,18 +247,18 @@ kbl-go/
 
 ## 15. 진행 현황 — 작업 01 (2026-11-18)
 
-기존 §1~14 원문과 **설계 초안 v0.1** 상태를 유지한다. 아래는 실측 결과와 구현 현황이며 미검증 설계를 임의 확정하지 않는다.
+설계 초안 상태를 유지하며 사용자 승인된 리뷰 변경만 §7 및 환경 설정 설명에 반영했다. 아래는 현재 구현 현황이며 미검증 정책을 임의 확정하지 않는다.
 
 - Issue: #1 / 브랜치: `feat/project-setup-api-validation`.
-- 완료: 설계 원문 저장 확인, 최소 FastAPI health·Swagger, `.env.example`·Git 제외·의존성, 네 Tool 입력/출력·오류 및 Registry, API 검증 스크립트.
+- 완료: 설계 저장, 최소 FastAPI health·Swagger, 로컬 `.env`·Git 제외·의존성, 네 Tool 입력/출력·오류 및 Registry, API 검증 스크립트.
 - 실측 완료: KBL `fromDate/toDate=YYYYMMDD`, `tcodeList`, `Channel=WEB`, `TeamCode=XX`; 목록 `gmkey` → `/match/{gmkey}` 상세 HTTP 200. 2026-11-18~25 7개, 과거 날짜·팀 필터·빈 결과 확인. F3003 구현 가능 근거 확보.
-- 검증 완료: 오프라인 테스트 27개 통과, 경고 1건; 실제 Uvicorn health/docs/openapi HTTP 200; pip check 통과. mock 성공과 실제 통신 성공을 구분한다. 독립 검토에서 발견한 키 반사 응답은 Tool 반환 경계에서 정제하고 회귀 테스트로 검증했다.
-- 미완료: Kakao/KMA 인증 키 없음 → `MISSING_API_KEY`, 실제 호출 미실행. 실제 예보 범위·인코딩·장소 일치·각 API 호출 한도/이용 허가 미확인.
+- 검증 완료: 최신 오프라인 테스트 32개 통과, 경고 1건; pip check 통과. 이전 실제 Uvicorn health/docs/openapi HTTP 200, 세 API 정상 호출 성공. 이번 리뷰 수정에서는 외부 API를 재호출하지 않았다. mock 성공과 실제 통신 성공을 구분한다.
+- 미완료: 예보 마지막 시각·인코딩 형태별 인증·장소 일치·각 API 호출 한도/이용 허가 미확인.
 - 설계 검토 필요: KBL 결과에 EASL·D리그가 포함됨. 실제 대회 구분을 보존하나 추천 대상 정책은 미확정. 원 설계 §6~7 구체화 및 승인 필요.
 - 명세 PDF가 현재 폴더에 없어 전체 필수 라이브러리 버전 대조는 보류. LangGraph 1.2.10은 dry-run 설치 가능성만 확인했다.
-- 미구현: LangGraph, UI, CRUD, RAG, 로깅 Agent. PR 생성·push·merge 미실행.
-- 상세 증거와 명령: `docs/VERIFICATION.md`. PR 초안: `docs/PR_TASK_01.md`.
-- 다음 작업: 로컬 `.env` 키 설정 후 카카오·기상청 재검증 → 대회 범위·API 제약을 검토하고 승인된 설계 변경만 반영 → 다음 Issue 구현.
+- 미구현: LangGraph, UI, CRUD, RAG, 로깅 Agent. 기존 브랜치는 push되었고 PR #2가 열려 있으며 merge는 미실행이다. 리뷰 보완도 같은 브랜치와 PR에 반영한다.
+- 상세 증거와 명령: `docs/VERIFICATION.md`. 내부 작업 전달서·체크리스트·PR 초안은 로컬 보존하고 Git 추적에서 제외한다. 번호를 늘린 새 교환 문서 없이 기존 파일을 재사용한다. 공유 설계·검증 문서는 계속 추적한다.
+- 다음 작업: 대회 범위·API 제약을 검토하고 승인된 설계 변경만 반영 → 다음 Issue 구현.
 
 ### 작업 01 추가 검증 — .env 적용 (2026-11-18 13:41 KST)
 
@@ -265,3 +267,10 @@ kbl-go/
 - Kakao HTTP 200: 잠실학생체육관 검색 → 서울특별시교육청 학생체육관 후보 1개, 도로명 주소·좌표·장소 링크 확인. 실제 경기장 일치 검증은 미완료로 유지한다.
 - KMA HTTP 200 / 서비스 코드 00: 2026-11-18 11:00 발표, 서울시청 격자 (60,127), 15:00 예보 기온 9℃·강수확률 30%·강수없음 확인. 이 값은 특정 시각 실측 예보이며 미래 고정 데이터가 아니다.
 - 남은 검증: 예보 제공 마지막 시각, 인증 실패 응답의 실제 형태, 계정별 한도, 장소 일치, KBL 대회 범위 및 사용 허가. 설계 초안 상태는 유지한다.
+
+### PR #2 리뷰 반영 — 2026-11-18
+
+- 이전: `forecast_at`에 발표 기준시각을 반환. 변경: 대상 정시로 수정하고 `issued_at`을 별도 보존. 이유: 예보 시각 의미 혼동 해소. 영향: Weather 스키마·Tool·시각/부분 데이터 회귀 테스트.
+- 이전: 예상하지 못한 내부 예외도 `UPSTREAM_ERROR`. 변경: `INTERNAL_ERROR` 추가. 이유: 내부 처리 오류와 외부 API 실패 구분. 영향: 공통 오류 스키마·Registry·오류 격리 회귀 테스트.
+- 강수확률 null과 `available` 의미는 §7 및 README에 명시했다. 전체 Agent 판정은 구현하지 않았다.
+- 대회 종류 실측값은 보존하지만 추천 대상 대회 선택 정책은 계속 미확정이다.

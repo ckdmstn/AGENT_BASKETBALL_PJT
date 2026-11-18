@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from backend.config import KST
 
 ErrorCode = Literal['INVALID_INPUT', 'MISSING_API_KEY', 'UPSTREAM_ERROR', 'TIMEOUT',
-                    'NO_RESULT', 'UNSUPPORTED_DATE', 'MISSING_FIELD']
+                    'NO_RESULT', 'UNSUPPORTED_DATE', 'MISSING_FIELD', 'INTERNAL_ERROR']
 T = TypeVar('T')
 
 
@@ -78,11 +78,13 @@ class Arena(BaseModel):
 
 
 class Weather(BaseModel):
-    forecast_at: datetime
+    forecast_at: datetime = Field(description='실제 예보 대상 정시 (Asia/Seoul). 요청 시각을 KST로 변환한 뒤 분 이하를 내린 시각.')
+    issued_at: datetime = Field(description='조회에 사용한 예보 발표 기준시각 (base_date/base_time, Asia/Seoul).')
     temperature_c: float | None = None
-    precipitation_probability_pct: float | None = Field(default=None, ge=0, le=100)
+    precipitation_probability_pct: float | None = Field(default=None, ge=0, le=100,
+        description='강수확률(%). null은 미제공/미확인이며 0%나 강수 조건 충족을 뜻하지 않는다.')
     precipitation_mm: str | None = None
-    available: bool
+    available: bool = Field(description='대상 시각의 기온·강수확률·강수량 중 하나 이상 제공됨. 모든 항목 존재 또는 사용자 조건 충족을 뜻하지 않는다.')
 
 
 class ToolMeta(BaseModel):

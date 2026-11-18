@@ -1,6 +1,7 @@
 """Offline contract tests. HTTP responses here are synthetic, not live evidence."""
 from datetime import date, datetime, timedelta, timezone
 from unittest.mock import Mock, patch
+from dataclasses import replace
 
 import pytest
 import requests
@@ -199,3 +200,39 @@ def test_result_discriminator_rejects_inconsistent_envelopes():
         ToolSuccess(ok=False, data={}, meta={'source': 'test'})
     with pytest.raises(ValidationError):
         ToolFailure(ok=True, error={'code': 'NO_RESULT', 'message': 'empty'}, meta={'source': 'test'})
+
+
+@pytest.mark.parametrize('categories', [[('TMP', '12'), ('POP', '20')], [('TMP', '12')]])
+def test_weather_target_and_issue_times_and_partial_probability(categories):
+    kst = timezone(timedelta(hours=9))
+    now = datetime(2026, 11, 18, 13, 0, tzinfo=kst)
+    rows = [{'fcstDate': '20261118', 'fcstTime': '1500', 'category': key, 'fcstValue': value}
+            for key, value in categories]
+    body = {'response': {'header': {'resultCode': '00'}, 'body': {'items': {'item': rows}, 'totalCount': len(rows)}}}
+    with patch('backend.tools.weather.datetime', wraps=datetime) as clock, patch('requests.get', return_value=response(body)):
+        clock.now.return_value = now
+        result = invoke('get_weather', {'date_time': '2026-11-18T06:45:00+00:00', 'lat': 37.5665, 'lon': 126.978}, settings(kma_key='synthetic-key'))
+    assert result.ok
+    assert result.data.forecast_at == datetime(2026, 11, 18, 15, tzinfo=kst)
+    assert result.data.issued_at == datetime(2026, 11, 18, 11, tzinfo=kst)
+    assert result.data.available is True
+    assert result.data.temperature_c == 12
+    assert result.data.precipitation_probability_pct == (20 if len(categories) > 1 else None)
+
+
+@pytest.mark.parametrize('broken_handler', [Mock(side_effect=RuntimeError('synthetic-private-key traceback')),
+                                          Mock(return_value={'malformed': True})])
+def test_unexpected_internal_errors_are_distinct_and_safe(broken_handler):
+    tool = replace(TOOLS['search_arena'], handler=broken_handler)
+    with patch.dict(TOOLS, {'search_arena': tool}):
+        result = invoke('search_arena', {'venue_name': '체육관'}, settings(kakao_key='synthetic-private-key'))
+    assert result.error.code == 'INTERNAL_ERROR'
+    assert 'synthetic-private-key' not in result.model_dump_json()
+    assert 'traceback' not in result.model_dump_json()
+
+
+def test_external_connection_error_stays_upstream_error():
+    with patch('requests.get', side_effect=requests.ConnectionError('synthetic-private-key')):
+        result = invoke('search_arena', {'venue_name': '체육관'}, settings(kakao_key='synthetic-private-key'))
+    assert result.error.code == 'UPSTREAM_ERROR'
+    assert 'synthetic-private-key' not in result.model_dump_json()

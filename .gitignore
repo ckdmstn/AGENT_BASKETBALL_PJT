@@ -10,3 +10,7 @@ __pycache__/
 logs/
 .verification/
 .vscode/
+# Internal task handoffs and PR drafts stay local; reuse existing documents.
+docs/CODEX_TASK*.md
+docs/TASK_*_IMPLEMENTATION.md
+docs/PR_TASK*.md
