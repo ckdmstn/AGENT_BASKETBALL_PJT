@@ -8,15 +8,15 @@
 ```powershell
 python -m venv .venv
 .venv\Scripts\python -m pip install -r requirements.txt
-# .env가 없는 경우에만 예시를 복사한다. 기존 .env는 덮어쓰지 않는다.
-if (!(Test-Path .env)) { Copy-Item .env.example .env }
+# 프로젝트 루트의 .env에 아래 환경변수를 설정한다.
 .venv\Scripts\python -m uvicorn backend.main:app --reload
 ```
 
 - 상태: http://127.0.0.1:8000/api/health
 - Swagger: http://127.0.0.1:8000/docs
 - 외부 API Tool은 아직 HTTP 라우트로 공개하지 않았다. Python의 `invoke(name, arguments)`로 호출한다.
-- `.env`에 `KAKAO_REST_API_KEY`, `KMA_SERVICE_KEY`를 로컬에서 입력한다. 기상청 키는 일반/URL 인코딩 키 모두 입력할 수 있으나 실제 인증 성공은 아직 미검증이다.
+- `.env`에 `KAKAO_REST_API_KEY`, `KMA_SERVICE_KEY`를 로컬에서 입력한다. 현재 설정된 키로 두 API의 실제 인증 성공을 확인했다. 기상청 키는 일반/URL 인코딩 형태를 처리하며, 두 형태 각각의 별도 실측은 하지 않았다.
+- 현재 프로젝트는 `.env`를 직접 사용한다. 기존 파일은 덮어쓰지 않는다. 추가 설정 이름은 `KBL_BASE_URL`, `KBL_TEAM_CODE`, `API_TIMEOUT_SECONDS`이며 기본값은 각각 `https://api.kbl.or.kr`, `XX`, `15`다.
 - `OPENAI_*`는 다음 작업용 이름만 예약했으며 현재 호출하지 않는다.
 
 ## 검증
@@ -48,8 +48,8 @@ LangGraph State/Node/Edge, 재계획, 세션, DB CRUD, 로깅 Agent, UI는 아�
 | API | 출처 | 실측/정책 확인 |
 |---|---|---|
 | KBL | [공식 웹 앱](https://www.kbl.or.kr/) / `api.kbl.or.kr` | 목록·gmkey 상세 HTTP 200. 공개 API 문서/사용 허가/호출 한도 미확인. 웹 앱 구현은 사용 허가를 뜻하지 않는다. |
-| Kakao | [로컬 개발 가이드](https://developers.kakao.com/docs/ko/local/dev-guide), [쿼터](https://developers.kakao.com/docs/ko/getting-started/quota), [이용 정책](https://developers.kakao.com/docs/ko/kakaomap/common) | 인증 키 없음, 실측 미실행. 무료 적용/유료 활성화 조건은 앱별 확인 필요. 앱 잔여 한도 미확인. |
-| KMA | [공공데이터포털 15084084](https://www.data.go.kr/data/15084084/openapi.do) | 인증 키 없음, 실측 미실행. 포털에서 글피까지 예보·출처표시 조건 확인. 발급 계정별 호출 한도 미확인. |
+| Kakao | [로컬 개발 가이드](https://developers.kakao.com/docs/ko/local/dev-guide), [쿼터](https://developers.kakao.com/docs/ko/getting-started/quota), [이용 정책](https://developers.kakao.com/docs/ko/kakaomap/common) | 실제 HTTP 200, 장소 후보의 주소·좌표·링크 확인. 무료 적용/유료 활성화 조건은 앱별 확인 필요. 앱 잔여 한도 미확인. |
+| KMA | [공공데이터포털 15084084](https://www.data.go.kr/data/15084084/openapi.do) | 실제 HTTP 200 / 서비스 00, 대상 시각의 기온·강수확률·강수량 확인. 예보 마지막 시각·발급 계정별 한도 미확인. |
 
 실제 명령/환경 버전/응답 증거/제약은 [검증 기록](docs/VERIFICATION.md)에 정리했다.
 명세 PDF가 현재 저장소에 없어 LangChain 등 명세 고정 버전 대조는 보류했다. LangGraph 1.2.10은 `pip install --dry-run` 의존성 해석만 확인했으며 설치·실행 검증은 다음 작업 범위다.
