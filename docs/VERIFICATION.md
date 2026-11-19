@@ -1,5 +1,54 @@
 # 작업 01 검증 기록
 
+## Task 02 Main Agent — 2026-11-19 최신 검증
+
+기준: Issue #3, `feat/langgraph-main-agent`, 선행 PR #2는 08:44 KST main 병합 확인. 기존 Task01 이력은 아래에 유지한다.
+
+### 실행 명령과 오프라인 결과
+```powershell
+.venv/Scripts/python -m pip install langgraph==1.2.10
+.venv/Scripts/python -m pytest -q
+.venv/Scripts/python -m pip check
+```
+
+- LangGraph 1.2.10 실제 설치·compile/invoke 실행. langchain-core 1.8.3 등 의존성 설치 성공. 명세 PDF 부재로 나머지 명세 고정 버전 대조는 보류했다.
+- 최신 pytest: **67 passed, 실패0**, 기존 Task01 32개 포함. pip check: **No broken requirements found**.
+- 이번 설치로 httpx2가 전이 의존성으로 설치되었고, 현재 실행에는 이전 Starlette TestClient 경고가 발생하지 않았다.
+- 테스트를 먼저 추가해 미구현 모듈 수집 실패를 확인한 뒤 구현했다. 기반40 → 그래프57 → API62 통과. 독립 검토 보완 시 인증/쿼터 재계획·상세조회 미확인·후반 후보·조건 패치 검증에서 6 실패/24 통과를 확인한 뒤 최종67 통과.
+- `tests/test_agent_contracts.py`: 조건 구조·patch 검증, 세션 복사/격리, 구독자 오류 격리, LLM 키누락/타임아웃/HTTP/파싱 실패·성공.
+- `tests/test_agent.py`: 실제 StateGraph 실행, ID/구장/좌표/시각 전달, 인사0회, 날짜 누락, POP null, 날씨 불필요 호출 생략, 명시적 팀 완화·캐시, 비허용 완화 방지, 최대3회, Tool 실패, 후속 세션, LLM 실패, 대회/지역/장소 검증, 인증·쿼터 실패 무재계획, 13번째 적합 후보 보존.
+- `tests/test_chat_api.py`: POST 응답 구조·후속 발화·입력 오류 비노출·OpenAPI 등록.
+
+### 실제 LLM 및 HTTP 통합 (mock 아님)
+- 현재 설정된 GMS `gpt-6-sol`: HTTPS chat/completions JSON 모드 HTTP200 및 구조화 응답 확인. 키·오류 원문은 출력하지 않았다.
+- 직접 AgentRunner 실행: 수원 서울SK 강수50% 이하 요청, 네 Tool 성공, 조건 충족1개, 약9.2초.
+- 임시 Uvicorn `--host 127.0.0.1 --port 8765` 실행 후 실제 requests HTTP 호출. 로컬 전용 `.verification/check_chat_live.py`로 실행했고 테스트 종료 후 해당 서버만 종료했다.
+- 최초 한글 stdin 파이프 테스트는 PowerShell 인코딩으로 입력이 손실되어 Tool 미실행으로 끝났다. 이를 성공 증거로 사용하지 않았고 UTF-8 파일/문자열 인자로 재실행했다.
+- 리뷰 수정 후 같은 HTTP 시나리오를 재검증한 최종 결과:
+
+| 요청 | HTTP | 실제 결과 | Tool 실제 호출 / 캐시 | 소요 |
+|---|---|---|---|---|
+| 2026-11-19 14시 이후 수원 서울SK, 강수확률50% 이하 | 200 | 조건 충족1개, 제외1개, 오류0, 재계획0 | 4 / 0 | 8806.30ms |
+| 같은 세션: 팀만 LG로, 없으면 타팀 허용 | 200 | 날짜·시간·지역·강수조건 유지, 선호LG 보존, 활성조건만 팀 완화, 추천1개, 오류0, 재계획1 | 7 / 1 | 12313.05ms |
+| 같은 세션: 안녕 | 200 | 추천·제외0, 오류0, 재계획0 | 0 / 0 | 4052.22ms |
+
+health/docs도 HTTP200. 위 Tool 호출은 registry의 실제 네 외부 Tool을 사용했다. 후속 요청의 목록 실제 호출은1회이고 재계획 시 같은 결과를 캐시에서 사용했다. 최종 안전한 응답 샘플 `.verification/chat-live.json`은 Git 제외다. 날씨는 이 통합 검증에서 카카오가 반환하고 공식 이름·주소로 대조한 실제 경기장 좌표를 사용했다.
+
+### 정책 실측·장소 출처
+- 2026-11-19~25 KBL 목록 HTTP200: R/1/정규시즌 2개, D1/2/D리그1차 3개를 같은 원본에서 확인했다. R/1만 추천 대상으로 판단하며 다른 값이나 누락은 정규리그로 추정하지 않는다.
+- 장소 이름·주소를 다음 공식 출처로 대조했다. 소스 표는 `backend/agent/evaluation.py`에 보존하며 좌표는 하드코딩하지 않는다.
+  - [학생체육관 공식 안내](https://ssg.sen.go.kr/fus/MI000000000000000366/html/cont0010v.do): 학생체육관 / 송파구 올림픽로25. KBL 실측의 잠실학생체육관 이름과 대조.
+  - [KGC 공식 소개](https://www.kgc.co.kr/intro/kgc-introduction/affiliate.do): 안양 정관장 아레나 / 안양시 동안구 평촌대로389.
+  - [KBL 공식 미디어 가이드](https://www.kbl.or.kr/upfiles/ebook/2425_media_guidebook.pdf), [수원시 공식 안내](https://www.suwon.go.kr/webcontent/ckeditor/2022/7/27/e471c9f8-36b0-402b-8187-5de1888c7db5.pdf): 수원KT/서수원칠보 / 수원시 권선구 서수원로577번길171.
+- [LangGraph 공식 StateGraph 참조](https://reference.langchain.com/python/langgraph/graph/state/StateGraph)를 참고하되 실제 동작은 설치된 1.2.10의 테스트로 확인했다.
+
+### 리뷰 결과·남은 한계
+- 독립 검토의 중요 지적 2개(인증 실패 시 재계획, 앞12개 후보 절단)를 재현 테스트로 수정했다. 조건 patch의 명시 필드와 changed_fields 불일치도 안전하게 거부한다. 상세 조회 실패는 unmet이 아니라 unknown으로 수정했다.
+- 보류한 경미 항목: 전체 실행을 세션 저장소 공통 잠금으로 보호하므로 다른 세션도 대기한다. 단일 프로세스 MVP이며 동시 처리 개선은 후속 검토 대상이다.
+- 메모리200세션·재시작 복구 없음·다중 worker 비공유, 기간31일 제한, 장소대조3곳만 지원. 기간별 후보 수가 많으면 실제 호출·지연이 증가한다.
+- 실제 인증 실패/쿼터 초과/각 발표 경계·예보 마지막 시각/전체10개 구장·KBL 사용허가·한도는 미검증이다. 해당 실패 처리는 mock으로만 테스트했다.
+- SQLite CRUD·Logging Agent 구독/저장·UI·RAG는 미구현이며 Issue #3 범위 밖이다. 자동 merge하지 않는다.
+
 ## PR #2 리뷰 수정 검증 — 2026-11-18
 
 - 실제 외부 API **재호출하지 않음**. 아래 13:41의 실제 정상 호출 기록은 수정 전 버전의 이력이다. 수정 후 검증은 네트워크 격리 mock 회귀 테스트다.

@@ -86,10 +86,10 @@ FastAPI chat API -> SQLite session_summaries
 `AgentState`의 최소 필드: `session_id`, `user_message`, `intent`, `conditions`, `last_conditions`, `tasks`, `task_results`, `games`, `details`, `arena_info`, `weather_info`, `eligible`, `excluded`, `replan_count`, `max_replans=3`, `relaxation_history`, `answer`, `errors`.
 
 - `analyze`: LLM 구조화 출력으로 intent(`plan|follow_up|help|greeting`)와 필터(`date_range`, `start_after`, `region`, `preferred_team`, `weather_preference`, `fallback_teams_allowed`)를 추출. 요청에 없는 조건은 null로 유지하며 후속 요청은 이전 조건과 **지정된 키만** 병합. LLM 분류 이유 이벤트 기록.
-- `plan`: 요청과 이미 저장된 Tool 결과를 보고 실행할 Tool 이름·인자·순서의 작업 목록 생성. 인사/도움말은 Tool 0개.
+- `plan`: LLM이 조건과 캐시 상태를 보고 등록 Tool의 종속 순서를 구조화 출력한다. 인자는 Python이 실제 앞선 Tool 결과에서 결합하며 LLM이 생성하지 않는다. 인사/도움말·날짜 누락은 Tool 0개.
 - `execute_tools`: 레지스트리에 등록된 Tool만 순서대로 호출; 경기 목록의 `match_id`를 상세 Tool에, 상세정보/경기장에서 확인한 명칭을 카카오 Tool에 전달. 실패해도 다른 후보를 진행; 조회 결과를 실행 단위 캐시로 보존.
 - `evaluate`: 실제 경기 일시, 팀, 확인된 경기장 주소/행정구역, 실제 조회한 강수확률을 필터와 비교해 근거를 반환. 모르는 값은 `unknown`이며 임의로 합격 처리하지 않는다.
-- `replan`: 충족하는 후보가 없고 사용자가 명시적으로 허용한 완화(예: 선호 LG→타 팀)나 다른 날짜 범위가 있을 때만 대안 작업을 구성. 기존 결과 재사용. 최대 3회 후 중단 사유 반환. 인증 실패/키 누락은 재계획 금지.
+- `replan`: 충족하는 후보가 없고 사용자가 명시적으로 허용한 완화(예: 선호 LG→타 팀)나 대안 날짜 범위가 있을 때만 대안 작업을 구성. 기존 결과 재사용. 최대 3회 후 종료. 인증 실패/키 누락은 재계획 금지. 기존 Tool의 UPSTREAM_ERROR에 실제 인증 실패가 포함되므로 모든 외부 서비스 오류·타임아웃도 보수적으로 재계획하지 않는다.
 - `respond`: 추천 경기/근거/주소/날씨 예보 기준시각/제외 사유/오류/조회 한계를 포함하는 구조화된 응답.
 
 Edge: START→analyze→plan→(tasks 빈 경우 respond, 아니면 execute_tools)→evaluate→(적합하면 respond, 대안 있으면 replan→plan, 상한 도달 시 respond)→END. `replan_count`는 **재계획 분기 횟수**로 정의하고 최대 3.
@@ -168,12 +168,15 @@ kbl-go/
     schemas.py
     db.py
     repositories.py
-    agents/
+    agent/
       state.py
       graph.py
       nodes.py
-      event_bus.py
-      logging_agent.py
+      evaluation.py
+      prompts.py
+      llm.py
+      events.py
+      sessions.py
     tools/
       registry.py
       kbl.py
@@ -254,9 +257,9 @@ kbl-go/
 - 실측 완료: KBL `fromDate/toDate=YYYYMMDD`, `tcodeList`, `Channel=WEB`, `TeamCode=XX`; 목록 `gmkey` → `/match/{gmkey}` 상세 HTTP 200. 2026-11-18~25 7개, 과거 날짜·팀 필터·빈 결과 확인. F3003 구현 가능 근거 확보.
 - 검증 완료: 최신 오프라인 테스트 32개 통과, 경고 1건; pip check 통과. 이전 실제 Uvicorn health/docs/openapi HTTP 200, 세 API 정상 호출 성공. 이번 리뷰 수정에서는 외부 API를 재호출하지 않았다. mock 성공과 실제 통신 성공을 구분한다.
 - 미완료: 예보 마지막 시각·인코딩 형태별 인증·장소 일치·각 API 호출 한도/이용 허가 미확인.
-- 설계 검토 필요: KBL 결과에 EASL·D리그가 포함됨. 실제 대회 구분을 보존하나 추천 대상 정책은 미확정. 원 설계 §6~7 구체화 및 승인 필요.
+- Task 02에서 기본 추천 범위를 정규리그로 지정했다. 2026-11-19 재실측한 `R/1`과 `정규시즌` 대응값을 적용하며 그 외 값은 충족으로 판단하지 않는다.
 - 명세 PDF가 현재 폴더에 없어 전체 필수 라이브러리 버전 대조는 보류. LangGraph 1.2.10은 dry-run 설치 가능성만 확인했다.
-- 미구현: LangGraph, UI, CRUD, RAG, 로깅 Agent. 기존 브랜치는 push되었고 PR #2가 열려 있으며 merge는 미실행이다. 리뷰 보완도 같은 브랜치와 PR에 반영한다.
+- Task 01은 PR #2로 main에 병합되었다 (2026-11-19 08:44 KST). 이후 Main Agent 진행 현황은 §16을 따른다. UI·CRUD·RAG·별도 로깅 Agent는 미구현이다.
 - 상세 증거와 명령: `docs/VERIFICATION.md`. 내부 작업 전달서·체크리스트·PR 초안은 로컬 보존하고 Git 추적에서 제외한다. 번호를 늘린 새 교환 문서 없이 기존 파일을 재사용한다. 공유 설계·검증 문서는 계속 추적한다.
 - 다음 작업: 대회 범위·API 제약을 검토하고 승인된 설계 변경만 반영 → 다음 Issue 구현.
 
@@ -274,3 +277,30 @@ kbl-go/
 - 이전: 예상하지 못한 내부 예외도 `UPSTREAM_ERROR`. 변경: `INTERNAL_ERROR` 추가. 이유: 내부 처리 오류와 외부 API 실패 구분. 영향: 공통 오류 스키마·Registry·오류 격리 회귀 테스트.
 - 강수확률 null과 `available` 의미는 §7 및 README에 명시했다. 전체 Agent 판정은 구현하지 않았다.
 - 대회 종류 실측값은 보존하지만 추천 대상 대회 선택 정책은 계속 미확정이다.
+
+## 16. Task 02 — Issue #3 Main Agent (2026-11-19)
+
+### 구현 현황
+- PR #2 병합 확인 후 최신 main `53c20ca`에서 `feat/langgraph-main-agent` 생성.
+- LangGraph **1.2.10 실제 설치·실행**. `AgentState`·6개 Node·조건부 Edge·최대3회 재계획 구현.
+- GMS `gpt-6-sol`의 OpenAI 호환 JSON 모드로 analyze/plan/respond 호출, Pydantic 검증. 분석의 `changed_fields`와 명시 조건 필드가 정확히 일치해야 하며 후속 발화는 그 필드만 병합한다.
+- LLM은 실제 경기·위치·예보 값을 생성하지 않는다. 응답은 허용된 안내 문장을 LLM이 선택하고 실제 추천 사실·사유는 Python으로 렌더링한다.
+- 기존 `registry.invoke()`와 네 외부 Tool을 그대로 재사용한다. 목록 ID→상세, 상세 구장명→장소, 공식 이름·주소로 대조한 장소 좌표+시작시각→날씨 전달.
+- 검증 결과 `met/unmet/unknown`, 강수확률 null/예보 대상시각 불일치/조회 실패는 충족으로 처리하지 않는다. low_rain은 확인된 확률 오름차순이며 숫자 상한을 만들지 않는다.
+- 실행 내 캐시, 원조건과 완화조건 분리, 메모리 세션 200개 조건·결과 요약, 요청별 EventBus, `POST /api/chat` 및 Pydantic 요청·응답 구현.
+- `RUN_COMPLETED`는 그래프 실행 종료를 의미하며 일부 Tool 오류는 errors에 남을 수 있다. 분석·계획 등 실행을 막는 실패는 RUN_FAILED. 이벤트에 예외 원문/키를 기록하지 않는다.
+- 전체 pytest **67 passed**, pip check 통과. 기존 Task01 32건 포함. 실제 HTTP에서 정상 추천·후속 조건 변경·1회 재계획/캐시·인사 무호출 확인. 상세 시각·호출·결과는 VERIFICATION.md에 기록.
+
+### 승인된 구체화·변경과 영향
+- 이전 SQLite 세션 계획 → 이번 단계는 Task02 지시에 따라 별도 MemorySessions로 최소 구현. 다음 Issue에서 저장 책임을 교체한다. 재시작/eviction/다중 worker 복구는 지원하지 않는다.
+- 대회 정책 미확정 → 사용자 지정 기본 정규리그와 KBL 실측 R/1 근거로 기본 필터 확정. 영향: evaluation 및 비정규 대회 회귀 테스트. EASL/D리그로 자동 확대하지 않는다.
+- 장소 유사 후보 미확정 → 공식 출처로 대조한 잠실학생·안양 정관장·수원 KT 3곳만 이름/주소 일치 확인. 다른 구장은 unknown. 표와 출처는 evaluation.py 및 VERIFICATION.md. 좌표는 카카오 실측값을 사용한다.
+- 폭주 방지를 위해 단일 날짜 범위 최대31일, 명시 대안 범위 최대3개, 세션200개 제한. 범위를 넘으면 구조화 검증 오류로 처리하며 임의로 기간을 자르지 않는다. 후보 목록의 앞부분만 잘라 적합 후보를 놓치는 구현은 리뷰 후 제거했다.
+- 서비스 실패는 조건 완화로 해결되지 않으므로 UPSTREAM_ERROR/TIMEOUT도 재계획 중단. 다른 후보의 잔여 작업은 계속한다. 인증 실패·후반 적합 후보 누락·조건 패치 불일치 회귀 테스트로 검증했다.
+
+### 남은 항목
+- SQLite CRUD·세션 영속화, Logging Agent 구독/저장, UI, RAG는 범위 밖.
+- 단일 프로세스 공통 세션 잠금으로 다른 사용자도 대기할 수 있다. per-session 잠금 개선은 이번 범위에서 보류한다.
+- 공식 구장 대조표는3곳만 지원. 나머지 구장·예보 마지막 시각·실제 인증 실패/쿼터 초과·API 사용허가/한도는 미검증.
+- 명세 PDF가 없어 추가 고정 버전 전체 대조는 보류하며 설치된 LangGraph 고정 버전은 임의 변경하지 않았다.
+- Issue #3 브랜치로 의미 단위 커밋·push, 구현 및 테스트 결과를 하나의 PR로 제출한다. 자동 merge하지 않는다.
