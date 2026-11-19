@@ -1,5 +1,29 @@
 # 작업 01 검증 기록
 
+## PR #4 리뷰 반영 — 2026-11-19 최신 결과
+
+- 실제 LLM 및 KBL/Kakao/KMA API **재호출하지 않음**. 아래 Task02의 실제 HTTP 결과는 이번 리뷰 수정 전 실행 이력이며, 이번 검증은 오프라인 mock/합성 입력 기반이다.
+- 최초 RED: `pytest tests/test_agent.py -q` → 15 failed / 30 passed. 지역 별칭·주소 누락·이벤트 reason 누락·추천/제외 근거 누락을 재현했다. 구현 후 전체90 passed.
+- 추가 경계 RED: 광역만 있고 요청 하위 행정구역이 없는 주소 → 1 failed / 13 passed(지역 선택). unknown으로 보완 후 최종 전체91 passed.
+
+```powershell
+.venv/Scripts/python -m pytest -q
+.venv/Scripts/python -m pip check
+```
+
+최종: **91 passed, 실패0**, **No broken requirements found**. 기존67개 테스트 삭제·제외 없음.
+
+추가24개 회귀 시나리오:
+- 지역13개: 서울/서울특별시, 부산/부산광역시, 경기/경기도 양방향, 다른 광역, 주소 없음, 선행 광역 미판별, 도로명에만 지역명, 잘못된 중간 토큰, 하위 행정구역과 유사 도로명, 하위 행정구역 누락. 공식 장소 확인과 지역 확인 분리도 검증.
+- 이벤트1개: analyze/plan reason 기록, 기존 intent/changed_fields/tools 및 sequence 순서 유지.
+- 이벤트 보호5개: 실제 설정을 대신하는 합성 키, 인증 헤더, 예외 문자열, 긴 추론, 대화 원문을 analyze/plan reason에 주입. 구독자 수신 전에 정제/대체되고 최대120자임을 검증. 구독자 하나의 실패에도 RUN_COMPLETED 유지.
+- 렌더링3개: 추천 경기 사실 및 date/time/region/weather 충족 이유, POP null 미확인 이유, POP 상한 초과 불충족 이유. 기존 구조화 checks도 유지.
+- 조건2개: 후속 발화의 타 팀 허용 철회 및 다른 조건 유지, 구조적으로 유효하나 사용자 뜻과 다른 합성 허용 결과의 한계 재현. 기존 비허용 완화 방지·일부 조건 변경 테스트 유지.
+
+주의: 마지막 합성 허용 테스트는 잘못된 LLM 해석이 실제로 통과할 수 있음을 문서화한 것이며, 사용자 의미 검증이 완성되었다는 증거가 아니다. 복잡한 신규 검증기를 추가하지 않았다. reason 보호도 설정 키/의심 표현/길이/원문 검사이며 모든 임의 민감 텍스트를 식별하는 범용 DLP는 아니다.
+
+지역·이벤트·렌더링만 수정했다. SQLite CRUD·Logging Agent·UI·RAG는 미구현을 유지한다. PR #4에 Refs #3로 반영하고 자동 merge/Issue 종료하지 않는다.
+
 ## Task 02 Main Agent — 2026-11-19 최신 검증
 
 기준: Issue #3, `feat/langgraph-main-agent`, 선행 PR #2는 08:44 KST main 병합 확인. 기존 Task01 이력은 아래에 유지한다.
