@@ -231,3 +231,79 @@ def test_region_administrative_aliases_and_road_name_isolation(requested,address
     r=assess(g.model_dump(mode='json'),detail.model_dump(mode='json'),arena.model_dump(mode='json'),None,Conditions(region=requested))
     assert r.checks['region'].status == expected
     assert r.checks['venue'].status == 'unknown'  # Region does not certify a venue.
+
+
+def test_llm_decision_reasons_are_recorded_in_order():
+    a=analysis()
+    a['reason']='명시한 날짜의 경기를 요청함'
+    r=runner([a]).run('경기 추천')
+    decisions=[e for e in r.events if e['event_type']=='LLM_DECISION']
+    assert decisions[0]['payload']['reason']=='명시한 날짜의 경기를 요청함'
+    assert decisions[1]['payload']['reason']=='필요한 정보만 조회'
+    assert decisions[0]['payload']['changed_fields']==['date_range']
+    assert decisions[1]['payload']['tools']==['search_kbl_games','get_kbl_game_detail','search_arena']
+    assert [e['sequence_no'] for e in r.events] == list(range(1,len(r.events)+1))
+
+
+@pytest.mark.parametrize('reason', ['synthetic-private-key', 'Authorization: Bearer hidden-credential',
+                                   'Traceback RuntimeError: raw exception', '상세 내부 추론'*30, '경기 추천'])
+def test_decision_reasons_are_safe_before_subscriber_delivery(reason):
+    from unittest.mock import patch
+    from backend.agent.events import EventBus
+    captured=[]
+    original=EventBus.publish
+    def publish(bus,*args,**kwargs):
+        if not bus._subscribers:
+            bus.subscribe(lambda event: captured.append(event.model_dump(mode='json')))
+            bus.subscribe(lambda event: (_ for _ in ()).throw(RuntimeError('subscriber error')))
+        return original(bus,*args,**kwargs)
+    a=analysis()
+    a['reason']=reason
+    config=Settings(llm_key='synthetic-private-key')
+    class ReasonLLM(FakeLLM):
+        def complete(self,stage,payload,output_model):
+            result=super().complete(stage,payload,output_model)
+            return result.model_copy(update={'reason':reason}) if stage=='plan' else result
+    with patch.object(EventBus,'publish',publish):
+        r=AgentRunner(llm=ReasonLLM([a]),tool_invoker=FakeTools(),settings=config).run('경기 추천')
+    reasons=[e['payload']['reason'] for e in captured if e['event_type']=='LLM_DECISION' and e['node_name'] in ('analyze','plan')]
+    assert reasons and all(0<len(text)<=120 for text in reasons)
+    for text in reasons:
+        assert not any(secret in text for secret in ('synthetic-private-key','hidden-credential','Traceback','raw exception','경기 추천'))
+    assert r.events[-1]['event_type']=='RUN_COMPLETED'
+
+
+def test_answer_renders_recommendation_reasons_from_checks():
+    r=runner([analysis(region='서울',start_after='14:00',max_precipitation_probability_pct=30)]).run('추천')
+    assert '2026-11-19T19:00:00+09:00' in r.answer and '잠실학생체육관' in r.answer
+    assert '추천 근거' in r.answer
+    for key in ('date','time','region','weather'):
+        assert r.recommendations[0].checks[key].reason in r.answer
+
+
+@pytest.mark.parametrize('pop,expected', [(None,'미확인'),(80,'불충족')])
+def test_answer_explains_unknown_and_unmet_from_checks(pop,expected):
+    r=runner([analysis(max_precipitation_probability_pct=30)],FakeTools(pop=pop)).run('강수30%')
+    assert expected in r.answer
+    assert r.excluded[0].checks['weather'].reason in r.answer
+    assert not r.recommendations
+
+
+def test_follow_up_revokes_prior_team_relaxation_permission():
+    a=runner([analysis(preferred_team='LG',fallback_teams_allowed=True,region='서울',start_after='14:00'),
+              {'intent':'follow_up','conditions':{'fallback_teams_allowed':False},'changed_fields':['fallback_teams_allowed']}])
+    first=a.run('LG 없으면 다른팀도 가능', 'revoke')
+    second=a.run('이제 다른 팀은 안 돼', 'revoke')
+    assert first.replan_count == 1 and second.replan_count == 0
+    assert second.conditions.preferred_team=='LG' and not second.recommendations
+    assert second.conditions.region=='서울' and second.conditions.start_after.isoformat()=='14:00:00'
+    assert second.conditions.date_range == first.conditions.date_range
+
+
+def test_structurally_valid_llm_permission_is_not_semantic_authorization_proof():
+    # Deliberately wrong synthetic extraction: this documents the semantic gap.
+    a=analysis(preferred_team='LG',fallback_teams_allowed=True)
+    extracted=Analysis.model_validate(a)
+    assert extracted.conditions.fallback_teams_allowed is True
+    r=runner([a]).run('LG 경기만 추천해 줘')
+    assert r.replan_count == 1  # Known limitation, not a correct interpretation claim.

@@ -1,4 +1,5 @@
 import json
+import re
 from copy import deepcopy
 from datetime import datetime
 
@@ -58,6 +59,16 @@ class Nodes:
     def ask(self, stage, payload, model):
         return self.llm.complete(stage, redact_result(payload, self.settings), model)
 
+    def decision_reason(self, reason, state, fallback):
+        """Short public summary only; sanitize before EventBus subscribers see it."""
+        clean = ' '.join(redact_result(reason, self.settings).split())
+        sensitive = re.search(r'api[ _-]?key|token|secret|password|authorization|bearer|traceback|exception|error|https?://|인증정보|비밀번호|예외', clean, re.IGNORECASE)
+        message = ' '.join(state['user_message'].split())
+        if (not clean or len(clean) > 120 or sensitive or '[REDACTED]' in clean
+                or message in clean):
+            return fallback
+        return clean
+
     def analyze(self, state):
         result = self.ask('analyze', {'message': state['user_message'], 'current_date': datetime.now(KST).date().isoformat(),
                                      'last_conditions': state['last_conditions'], 'last_summary': state['last_summary']}, Analysis)
@@ -71,7 +82,8 @@ class Nodes:
         state['conditions'] = c.model_dump(mode='json')
         state['active_conditions'] = deepcopy(state['conditions'])
         state['bus'].publish('LLM_DECISION', node_name='analyze',
-                             payload={'intent': result.intent, 'changed_fields': result.changed_fields})
+                             payload={'intent': result.intent, 'changed_fields': result.changed_fields,
+                                      'reason': self.decision_reason(result.reason, state, '요청 의도와 명시적으로 변경한 조건을 추출함')})
 
     def plan(self, state):
         c = Conditions.model_validate(state['active_conditions'])
@@ -86,7 +98,9 @@ class Nodes:
         if proposed.tools != expected:
             raise LLMError('INVALID_TOOL_PLAN')
         state['tasks'] = proposed.tools
-        state['bus'].publish('LLM_DECISION', node_name='plan', payload={'tools': proposed.tools})
+        state['bus'].publish('LLM_DECISION', node_name='plan',
+                             payload={'tools': proposed.tools,
+                                      'reason': self.decision_reason(proposed.reason, state, '조건 검증에 필요한 Tool을 종속 순서로 선택함')})
 
     def call(self, state, name, args):
         key = json.dumps([name, args], sort_keys=True)
@@ -180,8 +194,20 @@ class Nodes:
         for item in state['eligible']:
             g, d = item['game'], item['detail']
             lines.append(f"{d['start_at']}: {g['home_team']} vs {g['away_team']} / {d['venue_name']}")
+            keys = ('date', 'time', 'team', 'region', 'weather')
+            reasons = [item['checks'][k]['reason'] for k in keys
+                       if k in item['checks'] and item['checks'][k]['status'] == 'met']
+            lines.append('추천 근거: ' + '; '.join(reasons))
         if not state['eligible']:
             lines.append('검증된 조건 충족 경기가 없습니다. 불충족 또는 미확인 사유를 확인해 주세요.')
+        # Keep the text concise; the complete per-candidate checks remain in the response.
+        for item in state['excluded'][:3]:
+            for status, label in (('unmet', '불충족'), ('unknown', '미확인')):
+                reasons = [check['reason'] for check in item['checks'].values() if check['status'] == status]
+                if reasons:
+                    lines.append(f"{item['match_id']} {label}: " + '; '.join(reasons[:2]))
+        if len(state['excluded']) > 3:
+            lines.append(f"추가 제외·미확인 후보 {len(state['excluded']) - 3}건은 구조화된 checks를 확인해 주세요.")
         if state['relaxation_history']:
             lines.append(f"명시적으로 허용한 대안으로 {state['replan_count']}회 재계획했습니다.")
         if state['errors']:
