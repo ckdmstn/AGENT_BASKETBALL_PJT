@@ -206,3 +206,28 @@ def test_matching_candidate_after_twelve_other_games_is_not_discarded():
     r=runner([analysis(preferred_team='SK',fallback_teams_allowed=True)],tools).run('SK 우선')
     assert [x.match_id for x in r.recommendations] == ['target']
     assert r.replan_count == 0
+
+
+@pytest.mark.parametrize('requested,address,expected', [
+    ('서울','서울특별시 송파구 올림픽로 25','met'),
+    ('서울특별시','서울 송파구 올림픽로 25','met'),
+    ('부산','부산광역시 동래구 사직로 55','met'),
+    ('부산광역시','부산 동래구 사직로 55','met'),
+    ('경기','경기도 수원시 권선구 서수원로577번길 171','met'),
+    ('경기도','경기 수원시 권선구 서수원로577번길 171','met'),
+    ('서울','부산광역시 동래구 사직로 55','unmet'),
+    ('서울',None,'unknown'),
+    ('서울','주소 미확인 서울로 25','unknown'),
+    ('서울','경기 수원시 서울로 25','unmet'),
+    ('서울','경기 서울 수원시 25','unmet'),
+    ('송파','서울특별시 강남구 송파로 25','unmet'),
+])
+def test_region_administrative_aliases_and_road_name_isolation(requested,address,expected):
+    from backend.agent.evaluation import assess
+    from backend.agent.state import Conditions
+    g=game()
+    detail=GameDetail(match_id=g.match_id,start_at=g.start_at,home_team=g.home_team,away_team=g.away_team,venue_name=g.venue_name)
+    arena=Arena(name='구장 후보',road_address=address,verified_kbl_arena=False)
+    r=assess(g.model_dump(mode='json'),detail.model_dump(mode='json'),arena.model_dump(mode='json'),None,Conditions(region=requested))
+    assert r.checks['region'].status == expected
+    assert r.checks['venue'].status == 'unknown'  # Region does not certify a venue.

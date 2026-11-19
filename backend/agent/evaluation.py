@@ -20,6 +20,37 @@ def normalized(value):
     return re.sub(r'\s+', '', value or '').casefold()
 
 
+# Exact names/aliases only. Never strip arbitrary suffixes from a road name.
+REGION_NAMES = {
+    '서울': ('서울', '서울특별시'), '부산': ('부산', '부산광역시'),
+    '대구': ('대구', '대구광역시'), '인천': ('인천', '인천광역시'),
+    '광주': ('광주', '광주광역시'), '대전': ('대전', '대전광역시'),
+    '울산': ('울산', '울산광역시'), '세종': ('세종', '세종특별자치시'),
+    '경기': ('경기', '경기도'), '강원': ('강원', '강원도', '강원특별자치도'),
+    '충북': ('충북', '충청북도'), '충남': ('충남', '충청남도'),
+    '전북': ('전북', '전라북도', '전북특별자치도'), '전남': ('전남', '전라남도'),
+    '경북': ('경북', '경상북도'), '경남': ('경남', '경상남도'),
+    '제주': ('제주', '제주도', '제주특별자치도'),
+}
+REGION_ALIASES = {name: canonical for canonical, names in REGION_NAMES.items() for name in names}
+
+
+def region_match(requested: str, address: str) -> bool | None:
+    parts = address.split()
+    if not parts or parts[0] not in REGION_ALIASES:
+        return None
+    province = REGION_ALIASES[parts[0]]
+    if requested in REGION_ALIASES:
+        return REGION_ALIASES[requested] == province
+    # Only a contiguous administrative prefix is searchable; stop before roads/numbers.
+    administrative = []
+    for part in parts[1:]:
+        if not re.fullmatch(r'[가-힣]+(?:시|군|구|읍|면|동)', part):
+            break
+        administrative.extend((part, part[:-1]))
+    return requested in administrative
+
+
 def verified_arena(venue_name: str, candidates: list[dict]) -> Arena | None:
     for aliases, address, _source in VENUES:
         names = {normalized(n) for n in aliases}
@@ -74,13 +105,11 @@ def assess(game: dict, detail: dict | None, arena: dict | None, weather: dict | 
             f'요청 시작 하한={c.start_after}; 실제 시작={start.isoformat() if start else "미확인"}')
     if c.preferred_team:
         put('team', team_matches(c.preferred_team, game), f'선호팀={c.preferred_team}; 실제={g.home_team}/{g.away_team}')
-    put('venue', True if a and a.verified_kbl_arena else None, a.road_address if a else '공식 이름·주소와 일치하는 장소 미확인')
+    put('venue', True if a and a.verified_kbl_arena else None,
+        (a.road_address or a.address or '구장 주소 미확인') if a else '공식 이름·주소와 일치하는 장소 미확인')
     if c.region:
         address = (a.road_address or a.address or '') if a else ''
-        region = {'서울특별시': '서울', '부산광역시': '부산', '경기도': '경기'}.get(c.region, c.region)
-        # Compare administrative address tokens, not arbitrary substring of a road name.
-        tokens = address.split()[:3]
-        put('region', None if not a or not address else region in tokens or any(t == region + '시' or t == region + '구' for t in tokens),
+        put('region', region_match(c.region, address),
             f'요청 지역={c.region}; 확인 주소={address or "미확인"}')
     if requested_weather(c):
         pop = w.precipitation_probability_pct if w and w.available else None
