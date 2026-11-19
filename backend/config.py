@@ -17,6 +17,9 @@ class Settings:
     kbl_base_url: str = 'https://api.kbl.or.kr'
     kbl_team_code: str = 'XX'
     timeout: float = 15
+    llm_key: str = field(default='', repr=False)
+    llm_base_url: str = field(default='https://api.openai.com/v1', repr=False)
+    llm_model: str = ''
 
 
 def load_settings(*, use_env_file: bool = True) -> Settings:
@@ -31,4 +34,7 @@ def load_settings(*, use_env_file: bool = True) -> Settings:
     return Settings(kakao_key=os.getenv('KAKAO_REST_API_KEY', '').strip(),
                     kma_key=os.getenv('KMA_SERVICE_KEY', '').strip(),
                     kbl_base_url=os.getenv('KBL_BASE_URL', 'https://api.kbl.or.kr').rstrip('/'),
-                    kbl_team_code=os.getenv('KBL_TEAM_CODE', 'XX'), timeout=timeout)
+                    kbl_team_code=os.getenv('KBL_TEAM_CODE', 'XX'), timeout=timeout,
+                    llm_key=os.getenv('OPENAI_API_KEY', '').strip(),
+                    llm_base_url=os.getenv('OPENAI_BASE_URL', 'https://api.openai.com/v1').rstrip('/'),
+                    llm_model=os.getenv('OPENAI_MODEL', '').strip())
