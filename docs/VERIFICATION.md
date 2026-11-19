@@ -1,5 +1,104 @@
 # 작업 01 검증 기록
 
+## PR #4 최종 보완 — 권한 검증 최신 결과 (2026-11-19)
+
+실제 LLM/KBL/Kakao/KMA API **재호출 없음**. 아래 이전 통합 결과는 당시 실행 이력이며 이번에는 잘못된 합성 LLM 출력·Tool mock으로 권한 검증을 재현했다.
+
+```powershell
+.venv/Scripts/python -m pytest -q
+.venv/Scripts/python -m pip check
+```
+
+결과: **116 passed, 실패0**, **No broken requirements found**. 이전91개 테스트의 검증 목적 유지, 신규 `test_permissions.py` 25개 추가. 기존 무단 허용 테스트는 허용을 전제로 한 한계 문서화 대신 올바른0회 기대값으로 변경했다. 기존 캐시/최대3회/철회 테스트는 실제 권한 근거가 되도록 입력 문장만 명확히 했다.
+
+검증 내용:
+- LLM이 True를 반환해도 `LG 경기만`, `LG 경기 아니면 추천하지 마`, 모호한 질문·추측·인용은 팀 재계획0회. 명시적 허용은1회와 기존 캐시 재사용.
+- 이전 검증 권한으로 팀만 변경하면 유지, 철회가 LLM 출력에 누락/오독되어도 취소, 검증 기록 없는 과거 세션 플래그는 거부.
+- LLM이 만든 대체 날짜는 조회하지 않고 직접 ISO 명령에서 확인된 날짜만 재탐색. 잘못된 날짜·허용 철회·상충하는 허용/부정은 거부.
+- 모호한 허용은 warnings와 answer에 확인 요청을 표시한다. 최대3회와 원조건/활성조건 분리는 유지.
+- 독립 검토에서 철회 후 분석/계획 실패 시 권한이 되살아나는 경로 발견. 팀/날짜×분석/계획의4개 실패 회귀 테스트로 재현 후 수정. 철회는 실행 전 세션 권한 축소로 선반영하고 새 허용은 선부여하지 않는다.
+- 무제한 앞문맥을 허용하는 패턴을 제거하고 제한된 직접 팀 표현 전체 절만 인정한다. `허용이 아님: LG 경기 없으면 다른 팀도 괜찮아` 같은 문맥은 허용되지 않는다.
+
+RED 이력: 권한 모듈 미구현 수집 오류 → 초기108통과(기존3개 허용/기간 입력의 지원 문법 구체화 후) → 철회 표현3실패 재현·수정111통과 → 처리 실패 후 철회 지속4실패 재현·수정115통과 → 비허용 앞문맥1실패 재현·수정116통과. 확인 안내 문구의 answer 누락도 단일 실패로 재현 후 수정했다.
+
+한계: 지원 문법 밖의 일반 한국어를 완전히 해석하지 않는다. 복잡한 범위/간접화법/외국어 허용은 미검증이며 자동 grant를 지원하지 않는다. 원조건 추출 자체를 검증하는 별도 Agent는 없다. 이전 메모리 세션·구장3곳·공통 잠금·날씨/이용 조건 제약도 유지한다.
+
+권한 수정은 기존 PR #4에 Refs #3로 반영하며 merge/Issue 종료하지 않는다. 상세 지원 예시는 PROJECT_PLAN 및 README에 기록한다.
+
+## PR #4 리뷰 반영 — 2026-11-19 최신 결과
+
+- 실제 LLM 및 KBL/Kakao/KMA API **재호출하지 않음**. 아래 Task02의 실제 HTTP 결과는 이번 리뷰 수정 전 실행 이력이며, 이번 검증은 오프라인 mock/합성 입력 기반이다.
+- 최초 RED: `pytest tests/test_agent.py -q` → 15 failed / 30 passed. 지역 별칭·주소 누락·이벤트 reason 누락·추천/제외 근거 누락을 재현했다. 구현 후 전체90 passed.
+- 추가 경계 RED: 광역만 있고 요청 하위 행정구역이 없는 주소 → 1 failed / 13 passed(지역 선택). unknown으로 보완 후 최종 전체91 passed.
+
+```powershell
+.venv/Scripts/python -m pytest -q
+.venv/Scripts/python -m pip check
+```
+
+최종: **91 passed, 실패0**, **No broken requirements found**. 기존67개 테스트 삭제·제외 없음.
+
+추가24개 회귀 시나리오:
+- 지역13개: 서울/서울특별시, 부산/부산광역시, 경기/경기도 양방향, 다른 광역, 주소 없음, 선행 광역 미판별, 도로명에만 지역명, 잘못된 중간 토큰, 하위 행정구역과 유사 도로명, 하위 행정구역 누락. 공식 장소 확인과 지역 확인 분리도 검증.
+- 이벤트1개: analyze/plan reason 기록, 기존 intent/changed_fields/tools 및 sequence 순서 유지.
+- 이벤트 보호5개: 실제 설정을 대신하는 합성 키, 인증 헤더, 예외 문자열, 긴 추론, 대화 원문을 analyze/plan reason에 주입. 구독자 수신 전에 정제/대체되고 최대120자임을 검증. 구독자 하나의 실패에도 RUN_COMPLETED 유지.
+- 렌더링3개: 추천 경기 사실 및 date/time/region/weather 충족 이유, POP null 미확인 이유, POP 상한 초과 불충족 이유. 기존 구조화 checks도 유지.
+- 조건2개: 후속 발화의 타 팀 허용 철회 및 다른 조건 유지, 구조적으로 유효하나 사용자 뜻과 다른 합성 허용 결과의 한계 재현. 기존 비허용 완화 방지·일부 조건 변경 테스트 유지.
+
+주의: 마지막 합성 허용 테스트는 잘못된 LLM 해석이 실제로 통과할 수 있음을 문서화한 것이며, 사용자 의미 검증이 완성되었다는 증거가 아니다. 복잡한 신규 검증기를 추가하지 않았다. reason 보호도 설정 키/의심 표현/길이/원문 검사이며 모든 임의 민감 텍스트를 식별하는 범용 DLP는 아니다.
+
+지역·이벤트·렌더링만 수정했다. SQLite CRUD·Logging Agent·UI·RAG는 미구현을 유지한다. PR #4에 Refs #3로 반영하고 자동 merge/Issue 종료하지 않는다.
+
+## Task 02 Main Agent — 2026-11-19 최신 검증
+
+기준: Issue #3, `feat/langgraph-main-agent`, 선행 PR #2는 08:44 KST main 병합 확인. 기존 Task01 이력은 아래에 유지한다.
+
+### 실행 명령과 오프라인 결과
+```powershell
+.venv/Scripts/python -m pip install langgraph==1.2.10
+.venv/Scripts/python -m pytest -q
+.venv/Scripts/python -m pip check
+```
+
+- LangGraph 1.2.10 실제 설치·compile/invoke 실행. langchain-core 1.8.3 등 의존성 설치 성공. 명세 PDF 부재로 나머지 명세 고정 버전 대조는 보류했다.
+- 최신 pytest: **67 passed, 실패0**, 기존 Task01 32개 포함. pip check: **No broken requirements found**.
+- 이번 설치로 httpx2가 전이 의존성으로 설치되었고, 현재 실행에는 이전 Starlette TestClient 경고가 발생하지 않았다.
+- 테스트를 먼저 추가해 미구현 모듈 수집 실패를 확인한 뒤 구현했다. 기반40 → 그래프57 → API62 통과. 독립 검토 보완 시 인증/쿼터 재계획·상세조회 미확인·후반 후보·조건 패치 검증에서 6 실패/24 통과를 확인한 뒤 최종67 통과.
+- `tests/test_agent_contracts.py`: 조건 구조·patch 검증, 세션 복사/격리, 구독자 오류 격리, LLM 키누락/타임아웃/HTTP/파싱 실패·성공.
+- `tests/test_agent.py`: 실제 StateGraph 실행, ID/구장/좌표/시각 전달, 인사0회, 날짜 누락, POP null, 날씨 불필요 호출 생략, 명시적 팀 완화·캐시, 비허용 완화 방지, 최대3회, Tool 실패, 후속 세션, LLM 실패, 대회/지역/장소 검증, 인증·쿼터 실패 무재계획, 13번째 적합 후보 보존.
+- `tests/test_chat_api.py`: POST 응답 구조·후속 발화·입력 오류 비노출·OpenAPI 등록.
+
+### 실제 LLM 및 HTTP 통합 (mock 아님)
+- 현재 설정된 GMS `gpt-6-sol`: HTTPS chat/completions JSON 모드 HTTP200 및 구조화 응답 확인. 키·오류 원문은 출력하지 않았다.
+- 직접 AgentRunner 실행: 수원 서울SK 강수50% 이하 요청, 네 Tool 성공, 조건 충족1개, 약9.2초.
+- 임시 Uvicorn `--host 127.0.0.1 --port 8765` 실행 후 실제 requests HTTP 호출. 로컬 전용 `.verification/check_chat_live.py`로 실행했고 테스트 종료 후 해당 서버만 종료했다.
+- 최초 한글 stdin 파이프 테스트는 PowerShell 인코딩으로 입력이 손실되어 Tool 미실행으로 끝났다. 이를 성공 증거로 사용하지 않았고 UTF-8 파일/문자열 인자로 재실행했다.
+- 리뷰 수정 후 같은 HTTP 시나리오를 재검증한 최종 결과:
+
+| 요청 | HTTP | 실제 결과 | Tool 실제 호출 / 캐시 | 소요 |
+|---|---|---|---|---|
+| 2026-11-19 14시 이후 수원 서울SK, 강수확률50% 이하 | 200 | 조건 충족1개, 제외1개, 오류0, 재계획0 | 4 / 0 | 8806.30ms |
+| 같은 세션: 팀만 LG로, 없으면 타팀 허용 | 200 | 날짜·시간·지역·강수조건 유지, 선호LG 보존, 활성조건만 팀 완화, 추천1개, 오류0, 재계획1 | 7 / 1 | 12313.05ms |
+| 같은 세션: 안녕 | 200 | 추천·제외0, 오류0, 재계획0 | 0 / 0 | 4052.22ms |
+
+health/docs도 HTTP200. 위 Tool 호출은 registry의 실제 네 외부 Tool을 사용했다. 후속 요청의 목록 실제 호출은1회이고 재계획 시 같은 결과를 캐시에서 사용했다. 최종 안전한 응답 샘플 `.verification/chat-live.json`은 Git 제외다. 날씨는 이 통합 검증에서 카카오가 반환하고 공식 이름·주소로 대조한 실제 경기장 좌표를 사용했다.
+
+### 정책 실측·장소 출처
+- 2026-11-19~25 KBL 목록 HTTP200: R/1/정규시즌 2개, D1/2/D리그1차 3개를 같은 원본에서 확인했다. R/1만 추천 대상으로 판단하며 다른 값이나 누락은 정규리그로 추정하지 않는다.
+- 장소 이름·주소를 다음 공식 출처로 대조했다. 소스 표는 `backend/agent/evaluation.py`에 보존하며 좌표는 하드코딩하지 않는다.
+  - [학생체육관 공식 안내](https://ssg.sen.go.kr/fus/MI000000000000000366/html/cont0010v.do): 학생체육관 / 송파구 올림픽로25. KBL 실측의 잠실학생체육관 이름과 대조.
+  - [KGC 공식 소개](https://www.kgc.co.kr/intro/kgc-introduction/affiliate.do): 안양 정관장 아레나 / 안양시 동안구 평촌대로389.
+  - [KBL 공식 미디어 가이드](https://www.kbl.or.kr/upfiles/ebook/2425_media_guidebook.pdf), [수원시 공식 안내](https://www.suwon.go.kr/webcontent/ckeditor/2022/7/27/e471c9f8-36b0-402b-8187-5de1888c7db5.pdf): 수원KT/서수원칠보 / 수원시 권선구 서수원로577번길171.
+- [LangGraph 공식 StateGraph 참조](https://reference.langchain.com/python/langgraph/graph/state/StateGraph)를 참고하되 실제 동작은 설치된 1.2.10의 테스트로 확인했다.
+
+### 리뷰 결과·남은 한계
+- 독립 검토의 중요 지적 2개(인증 실패 시 재계획, 앞12개 후보 절단)를 재현 테스트로 수정했다. 조건 patch의 명시 필드와 changed_fields 불일치도 안전하게 거부한다. 상세 조회 실패는 unmet이 아니라 unknown으로 수정했다.
+- 보류한 경미 항목: 전체 실행을 세션 저장소 공통 잠금으로 보호하므로 다른 세션도 대기한다. 단일 프로세스 MVP이며 동시 처리 개선은 후속 검토 대상이다.
+- 메모리200세션·재시작 복구 없음·다중 worker 비공유, 기간31일 제한, 장소대조3곳만 지원. 기간별 후보 수가 많으면 실제 호출·지연이 증가한다.
+- 실제 인증 실패/쿼터 초과/각 발표 경계·예보 마지막 시각/전체10개 구장·KBL 사용허가·한도는 미검증이다. 해당 실패 처리는 mock으로만 테스트했다.
+- SQLite CRUD·Logging Agent 구독/저장·UI·RAG는 미구현이며 Issue #3 범위 밖이다. 자동 merge하지 않는다.
+- GitHub 최종 상태: 사용자 승인에 따라 `Refs #3`로 [PR #4](https://github.com/ckdmstn/AGENT_BASKETBALL_PJT/pull/4) 생성 성공. 기존 로컬 초안을 재사용했다. Issue 종료 및 merge는 수행하지 않았다. 이전 Closes 연결의 자동 승인 거부 기록은 현재 상태가 아니다.
+
 ## PR #2 리뷰 수정 검증 — 2026-11-18
 
 - 실제 외부 API **재호출하지 않음**. 아래 13:41의 실제 정상 호출 기록은 수정 전 버전의 이력이다. 수정 후 검증은 네트워크 격리 mock 회귀 테스트다.

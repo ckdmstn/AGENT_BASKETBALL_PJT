@@ -44,7 +44,7 @@ def result_adapter(tool: ToolDefinition) -> TypeAdapter:
 def redact_result(value, settings: Settings):
     """Remove credential echoes from every string, including upstream field names."""
     variants = set()
-    for secret in (settings.kakao_key, settings.kma_key):
+    for secret in (settings.kakao_key, settings.kma_key, settings.llm_key):
         if secret:
             variants.update((secret, unquote(secret), quote(unquote(secret), safe='')))
 
