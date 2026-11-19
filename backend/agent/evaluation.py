@@ -59,7 +59,7 @@ def assess(game: dict, detail: dict | None, arena: dict | None, weather: dict | 
     category = g.season_category
     regular = None if category is None or g.season_grade is None else category == 'R' and g.season_grade == 1
     put('competition', regular, f'정규리그 기준 R/1; 실측 대회={category}, 등급={g.season_grade}')
-    put('detail', d is not None, '식별자 기반 상세 조회 확인' if d else '상세 정보를 확인하지 못함')
+    put('detail', True if d is not None else None, '식별자 기반 상세 조회 확인' if d else '상세 정보를 확인하지 못함')
     # Prefer detail facts; if detail contradicts candidate, do not silently use either.
     conflicts = d and any(getattr(d, k) is not None and getattr(g, k) is not None and getattr(d, k) != getattr(g, k)
                           for k in ('start_at', 'home_team', 'away_team', 'venue_name'))

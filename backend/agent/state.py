@@ -44,8 +44,8 @@ class Analysis(StrictModel):
 
     @model_validator(mode='after')
     def explicit_updates(self):
-        if not set(self.changed_fields) <= self.conditions.model_fields_set:
-            raise ValueError('Every changed field must have an explicit value')
+        if set(self.changed_fields) != self.conditions.model_fields_set:
+            raise ValueError('Changed fields must exactly match explicitly supplied conditions')
         return self
 
 

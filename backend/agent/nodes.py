@@ -9,14 +9,12 @@ from backend.config import KST
 from backend.schemas import ToolFailure, ToolMeta, failure
 from backend.tools.registry import redact_result
 
-MAX_CANDIDATES = 12
-
-
 def next_alternative(state):
     if state['fatal'] or state['eligible'] or state['replan_count'] >= min(3, state['max_replans']):
         return None
-    # Authentication/configuration failures must not trigger new searches.
-    if any(e['code'] in ('MISSING_API_KEY', 'INTERNAL_ERROR') for e in state['errors']):
+    # Existing Tool contracts fold real auth/quota failures into UPSTREAM_ERROR.
+    # Conservatively do not relax user conditions to work around service failures.
+    if any(e['code'] in ('MISSING_API_KEY', 'INTERNAL_ERROR', 'UPSTREAM_ERROR', 'TIMEOUT') for e in state['errors']):
         return None
     original = Conditions.model_validate(state['conditions'])
     active = Conditions.model_validate(state['active_conditions'])
@@ -116,9 +114,6 @@ class Nodes:
         c = Conditions.model_validate(state['active_conditions'])
         rows = self.call(state, 'search_kbl_games', {'from_date': c.date_range.from_date.isoformat(), 'to_date': c.date_range.to_date.isoformat()})
         state['games'] = rows or []
-        if len(state['games']) > MAX_CANDIDATES:
-            state['warnings'].append(f'조회 결과 중 앞 {MAX_CANDIDATES}개만 평가했습니다. 전체 결과를 보장하지 않습니다.')
-            state['games'] = state['games'][:MAX_CANDIDATES]
         for g in state['games']:
             if g.get('season_category') != 'R' or g.get('season_grade') != 1:
                 continue

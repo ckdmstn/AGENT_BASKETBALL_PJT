@@ -17,6 +17,8 @@ def test_analysis_rejects_unlisted_or_missing_patch_values():
         Analysis(intent='follow_up', conditions={}, changed_fields=['preferred_team'])
     with pytest.raises(ValidationError):
         DateRange(from_date='2026-11-20', to_date='2026-11-19')
+    with pytest.raises(ValidationError):
+        Analysis(intent='plan', conditions={'region':'서울'}, changed_fields=[])
 
 
 def test_session_copy_and_partial_update_are_isolated():

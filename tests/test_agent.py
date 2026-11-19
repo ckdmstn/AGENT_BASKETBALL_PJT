@@ -179,3 +179,30 @@ def test_unverified_place_never_used_as_weather_location():
     r = a.run('추천')
     assert not r.recommendations
     assert 'get_weather' not in [name for name,_ in tools.calls]
+
+
+@pytest.mark.parametrize('tool,status,service', [('search_arena',401,None), ('get_weather',200,'30'),
+                                               ('get_weather',429,None)])
+def test_authentication_or_quota_failure_never_triggers_replan(tool,status,service):
+    tools=FakeTools()
+    def invoke(name,args,config):
+        if name == tool:
+            return failure('UPSTREAM_ERROR','외부 서비스 실패',ToolMeta(source='mock',http_status=status,service_code=service))
+        return tools(name,args,config)
+    a=AgentRunner(llm=FakeLLM([analysis(max_precipitation_probability_pct=30, fallback_teams_allowed=True,
+                                       alternative_date_ranges=[{'from_date':'2026-11-20','to_date':'2026-11-20'}])]),
+                  tool_invoker=invoke,settings=Settings())
+    r=a.run('허용 대안이 있어도 인증실패 재계획 금지')
+    assert r.replan_count == 0
+
+
+def test_unavailable_detail_is_unknown_not_condition_failure():
+    r=runner([analysis()],FakeTools(fail='get_kbl_game_detail')).run('추천')
+    assert r.excluded[0].checks['detail'].status == 'unknown'
+
+
+def test_matching_candidate_after_twelve_other_games_is_not_discarded():
+    tools=FakeTools([game(str(i),away='창원 LG') for i in range(12)] + [game('target')])
+    r=runner([analysis(preferred_team='SK',fallback_teams_allowed=True)],tools).run('SK 우선')
+    assert [x.match_id for x in r.recommendations] == ['target']
+    assert r.replan_count == 0
