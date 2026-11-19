@@ -221,6 +221,7 @@ def test_matching_candidate_after_twelve_other_games_is_not_discarded():
     ('서울','경기 수원시 서울로 25','unmet'),
     ('서울','경기 서울 수원시 25','unmet'),
     ('송파','서울특별시 강남구 송파로 25','unmet'),
+    ('수원','경기도 서수원로577번길 171','unknown'),
 ])
 def test_region_administrative_aliases_and_road_name_isolation(requested,address,expected):
     from backend.agent.evaluation import assess

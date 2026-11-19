@@ -48,7 +48,7 @@ def region_match(requested: str, address: str) -> bool | None:
         if not re.fullmatch(r'[가-힣]+(?:시|군|구|읍|면|동)', part):
             break
         administrative.extend((part, part[:-1]))
-    return requested in administrative
+    return requested in administrative if administrative else None
 
 
 def verified_arena(venue_name: str, candidates: list[dict]) -> Arena | None:
