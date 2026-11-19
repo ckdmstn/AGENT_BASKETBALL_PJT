@@ -114,7 +114,7 @@ def test_weather_skipped_without_weather_condition():
 
 def test_explicit_team_relaxation_reuses_results():
     tools = FakeTools([game()])
-    r = runner([analysis(preferred_team='LG', fallback_teams_allowed=True)], tools).run('LG 없으면 다른팀')
+    r = runner([analysis(preferred_team='LG', fallback_teams_allowed=True)], tools).run('LG 경기 없으면 다른 팀도 괜찮아')
     assert r.replan_count == 1 and len(r.recommendations) == 1
     assert r.conditions.preferred_team == 'LG' and r.active_conditions.preferred_team is None
     assert Counter(name for name,_ in tools.calls)['search_kbl_games'] == 1
@@ -129,7 +129,8 @@ def test_no_unapproved_relaxation():
 
 def test_replan_maximum_three_with_authorized_date_alternatives():
     alternatives = [{'from_date':f'2026-11-{d}', 'to_date':f'2026-11-{d}'} for d in (20,21,22)]
-    r = runner([analysis(preferred_team='LG', fallback_teams_allowed=True, alternative_date_ranges=alternatives)], FakeTools([])).run('명시적으로 허용한 날짜 대안')
+    r = runner([analysis(preferred_team='LG', fallback_teams_allowed=True, alternative_date_ranges=alternatives)], FakeTools([])).run(
+        'LG 경기 없으면 다른 팀도 괜찮아. 대체 날짜: 2026-11-20,2026-11-21,2026-11-22 허용해')
     assert r.replan_count == 3 and len(r.relaxation_history) == 3
     assert not r.recommendations
     assert r.active_conditions.region == r.conditions.region
@@ -137,7 +138,7 @@ def test_replan_maximum_three_with_authorized_date_alternatives():
 
 @pytest.mark.parametrize('tool', ['search_kbl_games','get_kbl_game_detail','search_arena','get_weather'])
 def test_tool_failure_is_safe_and_not_success(tool):
-    r = runner([analysis(region='서울', max_precipitation_probability_pct=30, fallback_teams_allowed=True)], FakeTools(fail=tool)).run('추천')
+    r = runner([analysis(region='서울', max_precipitation_probability_pct=30, fallback_teams_allowed=True)], FakeTools(fail=tool)).run('다른 팀도 괜찮아')
     assert any(e.code == 'MISSING_API_KEY' for e in r.errors)
     assert not r.recommendations and r.replan_count == 0
 
@@ -145,7 +146,7 @@ def test_tool_failure_is_safe_and_not_success(tool):
 def test_follow_up_changes_only_explicit_fields_and_keeps_original_after_relaxation():
     a = runner([analysis(region='서울', preferred_team='LG', fallback_teams_allowed=True),
                 {'intent':'follow_up','conditions':{'preferred_team':'SK'},'changed_fields':['preferred_team']}])
-    a.run('서울 LG 없으면 다른팀', 's')
+    a.run('서울 경기를 추천해 줘. LG 경기 없으면 다른 팀도 괜찮아', 's')
     second = a.run('팀만 SK', 's')
     assert second.conditions.region == '서울' and second.conditions.preferred_team == 'SK'
     assert second.conditions.date_range.from_date.isoformat() == '2026-11-19'
@@ -192,7 +193,7 @@ def test_authentication_or_quota_failure_never_triggers_replan(tool,status,servi
     a=AgentRunner(llm=FakeLLM([analysis(max_precipitation_probability_pct=30, fallback_teams_allowed=True,
                                        alternative_date_ranges=[{'from_date':'2026-11-20','to_date':'2026-11-20'}])]),
                   tool_invoker=invoke,settings=Settings())
-    r=a.run('허용 대안이 있어도 인증실패 재계획 금지')
+    r=a.run('다른 팀도 괜찮아. 대체 날짜: 2026-11-20 허용해')
     assert r.replan_count == 0
 
 
@@ -203,7 +204,7 @@ def test_unavailable_detail_is_unknown_not_condition_failure():
 
 def test_matching_candidate_after_twelve_other_games_is_not_discarded():
     tools=FakeTools([game(str(i),away='창원 LG') for i in range(12)] + [game('target')])
-    r=runner([analysis(preferred_team='SK',fallback_teams_allowed=True)],tools).run('SK 우선')
+    r=runner([analysis(preferred_team='SK',fallback_teams_allowed=True)],tools).run('SK 경기 없으면 다른 팀도 괜찮아')
     assert [x.match_id for x in r.recommendations] == ['target']
     assert r.replan_count == 0
 
@@ -293,7 +294,7 @@ def test_answer_explains_unknown_and_unmet_from_checks(pop,expected):
 def test_follow_up_revokes_prior_team_relaxation_permission():
     a=runner([analysis(preferred_team='LG',fallback_teams_allowed=True,region='서울',start_after='14:00'),
               {'intent':'follow_up','conditions':{'fallback_teams_allowed':False},'changed_fields':['fallback_teams_allowed']}])
-    first=a.run('LG 없으면 다른팀도 가능', 'revoke')
+    first=a.run('LG 경기 없으면 다른 팀도 괜찮아', 'revoke')
     second=a.run('이제 다른 팀은 안 돼', 'revoke')
     assert first.replan_count == 1 and second.replan_count == 0
     assert second.conditions.preferred_team=='LG' and not second.recommendations
@@ -301,10 +302,11 @@ def test_follow_up_revokes_prior_team_relaxation_permission():
     assert second.conditions.date_range == first.conditions.date_range
 
 
-def test_structurally_valid_llm_permission_is_not_semantic_authorization_proof():
-    # Deliberately wrong synthetic extraction: this documents the semantic gap.
+def test_structurally_valid_llm_permission_cannot_authorize_relaxation():
+    # A valid schema is not user consent, even if the LLM says true.
     a=analysis(preferred_team='LG',fallback_teams_allowed=True)
     extracted=Analysis.model_validate(a)
     assert extracted.conditions.fallback_teams_allowed is True
     r=runner([a]).run('LG 경기만 추천해 줘')
-    assert r.replan_count == 1  # Known limitation, not a correct interpretation claim.
+    assert r.replan_count == 0
+    assert r.conditions.fallback_teams_allowed is False

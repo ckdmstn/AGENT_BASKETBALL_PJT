@@ -6,6 +6,7 @@ from langgraph.graph import END, START, StateGraph
 from backend.agent.events import EventBus
 from backend.agent.llm import JsonLLM
 from backend.agent.nodes import Nodes, next_alternative
+from backend.agent.permissions import verify_permissions
 from backend.agent.sessions import MemorySessions
 from backend.agent.state import AgentState, ChatRequest, ChatResponse, Conditions
 from backend.config import load_settings
@@ -39,11 +40,16 @@ class AgentRunner:
         started = perf_counter()
         with self.sessions.lock:
             previous = self.sessions.load(sid) or {}
+            if previous:
+                checked, _ = verify_permissions(request.message, previous.get('permissions', {}), follow_up=True)
+                self.sessions.restrict_permissions(sid, checked)
+                previous = self.sessions.load(sid)
             bus = EventBus(sid, rid)
             conditions = Conditions().model_dump(mode='json')
             state = AgentState(session_id=sid, run_id=rid, user_message=request.message, intent='plan',
                                conditions=conditions, active_conditions=conditions.copy(),
                                last_conditions=previous.get('conditions', {}), last_summary=previous.get('summary', ''),
+                               last_permissions=previous.get('permissions', {}), permissions={},
                                tasks=[], task_results={}, games=[], details={}, arena_info={}, weather_info={},
                                eligible=[], excluded=[], replan_count=0, max_replans=3, relaxation_history=[],
                                answer='', errors=[], warnings=[], fatal=False, bus=bus)
@@ -66,5 +72,5 @@ class AgentRunner:
             response = ChatResponse.model_validate(redact_result(response.model_dump(mode='json'), self.settings))
             if not result['fatal'] and result['intent'] in ('plan','follow_up'):
                 summary = '추천 ID: ' + ','.join(item.match_id for item in response.recommendations)
-                self.sessions.save(sid, response.conditions, summary)
+                self.sessions.save(sid, response.conditions, summary, result['permissions'])
             return response

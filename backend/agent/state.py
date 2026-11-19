@@ -114,6 +114,8 @@ class AgentState(TypedDict, total=False):
     active_conditions: dict
     last_conditions: dict
     last_summary: str
+    last_permissions: dict
+    permissions: dict
     tasks: list[str]
     task_results: dict
     games: list[dict]

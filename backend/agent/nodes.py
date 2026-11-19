@@ -5,6 +5,7 @@ from datetime import datetime
 
 from backend.agent.evaluation import assess, requested_weather, team_matches, verified_arena
 from backend.agent.llm import LLMError
+from backend.agent.permissions import verify_permissions
 from backend.agent.state import Analysis, Conditions, Narration, WorkPlan
 from backend.config import KST
 from backend.schemas import ToolFailure, ToolMeta, failure
@@ -19,12 +20,14 @@ def next_alternative(state):
         return None
     original = Conditions.model_validate(state['conditions'])
     active = Conditions.model_validate(state['active_conditions'])
-    if active.preferred_team and original.fallback_teams_allowed:
+    if active.preferred_team and original.fallback_teams_allowed and state['permissions'].get('team'):
         return {'preferred_team': None}
     tried = {json.dumps(state['conditions'].get('date_range'), sort_keys=True)}
     tried.update(json.dumps(x['changes']['date_range'], sort_keys=True) for x in state['relaxation_history'] if 'date_range' in x['changes'])
     for alternative in original.alternative_date_ranges:
         value = alternative.model_dump(mode='json')
+        if value not in state['permissions'].get('date_ranges', []):
+            continue
         if json.dumps(value, sort_keys=True) not in tried:
             return {'date_range': value}
     return None
@@ -78,6 +81,14 @@ class Nodes:
         previous = state['last_conditions'] if result.intent == 'follow_up' else {}
         patch = result.conditions.model_dump(mode='json')
         merged = {**previous, **{k: patch[k] for k in result.changed_fields}}
+        permission, warnings = verify_permissions(state['user_message'], state['last_permissions'], follow_up=result.intent == 'follow_up')
+        if (merged.get('fallback_teams_allowed', False) != permission['team'] or
+                merged.get('alternative_date_ranges', []) != permission['date_ranges']):
+            warnings.append('조건 완화 권한은 LLM 플래그가 아닌 검증된 명시적 허용을 기준으로 적용했습니다. 불명확한 허용은 확인이 필요합니다.')
+        merged['fallback_teams_allowed'] = permission['team']
+        merged['alternative_date_ranges'] = permission['date_ranges']
+        state['permissions'] = permission
+        state['warnings'].extend(warnings)
         c = Conditions.model_validate(merged)
         state['conditions'] = c.model_dump(mode='json')
         state['active_conditions'] = deepcopy(state['conditions'])
@@ -212,4 +223,5 @@ class Nodes:
             lines.append(f"명시적으로 허용한 대안으로 {state['replan_count']}회 재계획했습니다.")
         if state['errors']:
             lines.append('일부 정보 조회에 실패했습니다. 오류 목록을 확인해 주세요.')
+        lines.extend(warning for warning in state['warnings'] if '허용' in warning and '확인' in warning)
         return '\n'.join(lines)
