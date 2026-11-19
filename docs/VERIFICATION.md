@@ -48,7 +48,7 @@ health/docs도 HTTP200. 위 Tool 호출은 registry의 실제 네 외부 Tool을
 - 메모리200세션·재시작 복구 없음·다중 worker 비공유, 기간31일 제한, 장소대조3곳만 지원. 기간별 후보 수가 많으면 실제 호출·지연이 증가한다.
 - 실제 인증 실패/쿼터 초과/각 발표 경계·예보 마지막 시각/전체10개 구장·KBL 사용허가·한도는 미검증이다. 해당 실패 처리는 mock으로만 테스트했다.
 - SQLite CRUD·Logging Agent 구독/저장·UI·RAG는 미구현이며 Issue #3 범위 밖이다. 자동 merge하지 않는다.
-- GitHub 최종 상태: 구현·문서 커밋은 원격 `feat/langgraph-main-agent`에 push 완료. PR 생성은 자동 승인 검토가 일반 PR 및 `Closes #3` 연결에 새 명시적 승인이 필요하다고 거부하여 **미생성**이다. 기존 로컬 PR 초안을 재사용하여 승인 후 제출한다. PR/Issue 상태를 바꿨다고 보고하지 않는다.
+- GitHub 최종 상태: 사용자 승인에 따라 `Refs #3`로 [PR #4](https://github.com/ckdmstn/AGENT_BASKETBALL_PJT/pull/4) 생성 성공. 기존 로컬 초안을 재사용했다. Issue 종료 및 merge는 수행하지 않았다. 이전 Closes 연결의 자동 승인 거부 기록은 현재 상태가 아니다.
 
 ## PR #2 리뷰 수정 검증 — 2026-11-18
 
