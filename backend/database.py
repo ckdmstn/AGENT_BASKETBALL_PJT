@@ -51,8 +51,8 @@ class Database:
             conn.executescript(SCHEMA)
 
     @contextmanager
-    def connection(self, *, write=False):
-        with closing(sqlite3.connect(self.path, timeout=2)) as conn:
+    def connection(self, *, write=False, timeout=2):
+        with closing(sqlite3.connect(self.path, timeout=timeout)) as conn:
             conn.row_factory = sqlite3.Row
             with conn:
                 if write:

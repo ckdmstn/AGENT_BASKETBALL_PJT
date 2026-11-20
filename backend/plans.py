@@ -1,8 +1,8 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Response
-from pydantic import AwareDatetime, BaseModel, ConfigDict, StringConstraints, field_validator, model_validator
+from fastapi import APIRouter, Depends, HTTPException, Path, Response
+from pydantic import AwareDatetime, BaseModel, ConfigDict, StringConstraints, computed_field, field_validator, model_validator
 
 from backend.config import KST
 from backend.database import Database, get_database
@@ -31,7 +31,10 @@ class PlanFields(BaseModel):
     @field_validator('start_at', 'end_at', check_fields=False)
     @classmethod
     def normalize_time(cls, value):
-        return value.astimezone(KST) if value is not None else None
+        try:
+            return value.astimezone(KST) if value is not None else None
+        except OverflowError:
+            raise ValueError('한국 표준시로 변환할 수 있는 날짜와 시각을 입력하세요.') from None
 
 
 class PlanCreate(PlanFields):
@@ -68,6 +71,11 @@ class Plan(PlanCreate):
     created_at: datetime
     updated_at: datetime
 
+    @computed_field
+    @property
+    def game_date(self) -> date:
+        return self.start_at.date()
+
 
 class PlanSaved(BaseModel):
     plan: Plan
@@ -77,6 +85,7 @@ class PlanSaved(BaseModel):
 
 router = APIRouter(prefix='/api/plans', tags=['plans'])
 DB = Annotated[Database, Depends(get_database)]
+PlanID = Annotated[int, Path(ge=1, le=2**63 - 1)]
 PLAN_COLUMNS = tuple(PlanCreate.model_fields)
 
 
@@ -137,13 +146,13 @@ def list_plans(db: DB) -> list[Plan]:
 
 
 @router.get('/{plan_id}')
-def read_plan(plan_id: int, db: DB) -> Plan:
+def read_plan(plan_id: PlanID, db: DB) -> Plan:
     with db.connection() as conn:
         return get_row(conn, plan_id)
 
 
 @router.patch('/{plan_id}')
-def patch_plan(plan_id: int, request: PlanPatch, db: DB) -> PlanSaved:
+def patch_plan(plan_id: PlanID, request: PlanPatch, db: DB) -> PlanSaved:
     with db.connection(write=True) as conn:
         current = get_row(conn, plan_id).model_dump(include=set(PLAN_COLUMNS))
         changes = request.model_dump(exclude_unset=True)
@@ -158,7 +167,7 @@ def patch_plan(plan_id: int, request: PlanPatch, db: DB) -> PlanSaved:
 
 
 @router.delete('/{plan_id}', status_code=204)
-def delete_plan(plan_id: int, db: DB) -> Response:
+def delete_plan(plan_id: PlanID, db: DB) -> Response:
     with db.connection(write=True) as conn:
         if not conn.execute('DELETE FROM plans WHERE id = ?', (plan_id,)).rowcount:
             raise HTTPException(404, '계획을 찾을 수 없습니다.')

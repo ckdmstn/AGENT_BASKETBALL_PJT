@@ -5,13 +5,13 @@ from backend.agent.events import AgentEvent
 from backend.agent.state import ConditionKey, ToolName
 from backend.config import Settings
 from backend.database import Database
+from backend.schemas import ErrorCode
 from backend.tools.registry import redact_result
 
 
 NODES = {'analyze', 'plan', 'execute_tools', 'evaluate', 'replan', 'respond'}
 TOOLS = get_args(ToolName)
-ERROR_CODES = ('INVALID_INPUT', 'MISSING_API_KEY', 'UPSTREAM_ERROR', 'TIMEOUT', 'NO_RESULT',
-               'UNSUPPORTED_DATE', 'MISSING_FIELD', 'INTERNAL_ERROR')
+ERROR_CODES = get_args(ErrorCode)
 
 
 def safe_payload(event: AgentEvent) -> dict:
@@ -49,7 +49,8 @@ class LoggingAgent:
         ids = [event.session_id, event.run_id]
         if redact_result(ids, self.settings) != ids:
             return
-        with self.db.connection(write=True) as conn:
+        # Best-effort logging should wait less than user-facing writes on lock contention.
+        with self.db.connection(write=True, timeout=0.05) as conn:
             conn.execute(
                 '''INSERT INTO agent_events
                    (session_id, run_id, sequence_no, timestamp, event_type, node_name, tool_name, payload)

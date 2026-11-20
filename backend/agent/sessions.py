@@ -1,7 +1,7 @@
+import json
 from collections import OrderedDict
 from copy import deepcopy
 from datetime import datetime
-import json
 from threading import RLock
 
 from backend.agent.state import Conditions
@@ -50,9 +50,10 @@ class MemorySessions:
 class SQLiteSessions:
     """Persist session summaries while the runner serializes turns within one process."""
 
+    lock = RLock()
+
     def __init__(self, db: Database):
         self.db = db
-        self.lock = RLock()
 
     def load(self, session_id):
         with self.lock, self.db.connection() as conn:
