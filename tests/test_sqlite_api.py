@@ -95,6 +95,59 @@ def test_invalid_patch_does_not_write(api):
     assert client.get(path).json() == plan
 
 
+def test_plan_core_fields_update_and_preserve_identifiers_and_legacy_end(api):
+    client, _ = api
+    original = client.post('/api/plans', json={**PLAN, 'end_at': '2026-11-20T02:00:00+09:00'}).json()['plan']
+    path = f"/api/plans/{original['id']}"
+    changes = {'start_at': '2026-11-19T16:00:00Z', 'home_team': '개인 홈팀', 'away_team': '개인 원정팀',
+               'venue_name': '개인 경기장', 'venue_address': '개인 주소', 'note': None}
+    response = client.patch(path, json=changes)
+    assert response.status_code == 200
+    plan = response.json()['plan']
+    assert plan['start_at'] == '2026-11-20T01:00:00+09:00' and plan['game_date'] == '2026-11-20'
+    for key in ('home_team', 'away_team', 'venue_name', 'venue_address', 'note'):
+        assert plan[key] == changes[key]
+    for key in ('id', 'match_id', 'end_at', 'session_id', 'created_at'):
+        assert plan[key] == original[key]
+    assert response.json()['overlapping_plan_ids'] == []
+    assert client.get(path).json() == plan
+    assert client.get('/api/plans').json() == [plan]
+
+
+@pytest.mark.parametrize('changes', [
+    {'start_at': '2026-02-30T19:00:00+09:00'}, {'start_at': '2026-11-19T20:00:00'},
+    {'start_at': '2026-11-19T21:01:00+09:00'}, {'home_team': '  '}, {'away_team': ''},
+    {'venue_name': None}, {'unknown_field': 'text'},
+])
+def test_invalid_core_patch_preserves_row(api, changes):
+    client, _ = api
+    plan = client.post('/api/plans', json=PLAN).json()['plan']
+    path = f"/api/plans/{plan['id']}"
+    assert client.patch(path, json=changes).status_code == 422
+    assert client.get(path).json() == plan
+
+
+def test_plan_patch_changed_start_recomputes_conflicts(api):
+    client, _ = api
+    first = client.post('/api/plans', json={**PLAN, 'end_at': None}).json()['plan']
+    second = client.post('/api/plans', json={**PLAN, 'match_id': 'other', 'end_at': None,
+                                            'start_at': '2026-11-19T20:00:00+09:00'}).json()['plan']
+    result = client.patch(f"/api/plans/{second['id']}", json={'start_at': first['start_at']}).json()
+    assert result['overlapping_plan_ids'] == [first['id']]
+    assert result['overlap_warnings'] == ['같은 시각에 시작하는 다른 경기 일정이 있습니다.']
+
+
+def test_patch_match_id_keeps_available_identity_contract_and_blocks_collision(api):
+    client, _ = api
+    first = client.post('/api/plans', json=PLAN).json()['plan']
+    second = client.post('/api/plans', json={**PLAN, 'match_id': 'other'}).json()['plan']
+    path = f"/api/plans/{second['id']}"
+    rejected = client.patch(path, json={'match_id': first['match_id'], 'note': 'must not save'})
+    assert rejected.status_code == 409
+    assert client.get(path).json() == second
+    assert client.patch(path, json={'match_id': 'available'}).json()['plan']['match_id'] == 'available'
+
+
 def test_overlap_across_timezones_and_adjacent_plans(api):
     client, _ = api
     first = client.post('/api/plans', json=PLAN).json()['plan']
