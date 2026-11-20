@@ -69,6 +69,12 @@ class Plan(PlanCreate):
     updated_at: datetime
 
 
+class PlanSaved(BaseModel):
+    plan: Plan
+    overlapping_plan_ids: list[int]
+    overlap_warnings: list[str]
+
+
 router = APIRouter(prefix='/api/plans', tags=['plans'])
 DB = Annotated[Database, Depends(get_database)]
 PLAN_COLUMNS = tuple(PlanCreate.model_fields)
@@ -89,8 +95,29 @@ def get_row(conn, plan_id):
     return Plan.model_validate(dict(row))
 
 
+def overlap_result(conn, plan: Plan) -> PlanSaved:
+    ids = []
+    warnings = []
+    if plan.end_at is None:
+        warnings.append('이 계획의 종료 시각이 없어 중복 검사를 수행할 수 없습니다.')
+    else:
+        times = values(plan)
+        ids = [row['id'] for row in conn.execute(
+            'SELECT id FROM plans WHERE id != ? AND start_at < ? AND end_at > ? ORDER BY id',
+            (plan.id, times['end_at'], times['start_at']),
+        )]
+        if ids:
+            warnings.append('시간이 겹치는 계획이 있습니다.')
+        if conn.execute(
+            'SELECT 1 FROM plans WHERE id != ? AND start_at < ? AND end_at IS NULL LIMIT 1',
+            (plan.id, times['end_at']),
+        ).fetchone():
+            warnings.append('기존 계획 중 종료 시각이 없어 중복 여부를 확인할 수 없는 일정이 있습니다.')
+    return PlanSaved(plan=plan, overlapping_plan_ids=ids, overlap_warnings=warnings)
+
+
 @router.post('', status_code=201)
-def create_plan(request: PlanCreate, db: DB) -> Plan:
+def create_plan(request: PlanCreate, db: DB) -> PlanSaved:
     now = datetime.now(KST).isoformat(timespec='microseconds')
     data = values(request)
     with db.connection(write=True) as conn:
@@ -100,7 +127,7 @@ def create_plan(request: PlanCreate, db: DB) -> Plan:
             f'INSERT INTO plans ({columns}, created_at, updated_at) VALUES ({placeholders}, ?, ?)',
             (*data.values(), now, now),
         )
-        return get_row(conn, cursor.lastrowid)
+        return overlap_result(conn, get_row(conn, cursor.lastrowid))
 
 
 @router.get('')
@@ -116,7 +143,7 @@ def read_plan(plan_id: int, db: DB) -> Plan:
 
 
 @router.patch('/{plan_id}')
-def patch_plan(plan_id: int, request: PlanPatch, db: DB) -> Plan:
+def patch_plan(plan_id: int, request: PlanPatch, db: DB) -> PlanSaved:
     with db.connection(write=True) as conn:
         current = get_row(conn, plan_id).model_dump(include=set(PLAN_COLUMNS))
         changes = request.model_dump(exclude_unset=True)
@@ -127,7 +154,7 @@ def patch_plan(plan_id: int, request: PlanPatch, db: DB) -> Plan:
         assignments = ', '.join(f'{field} = ?' for field in changes)
         conn.execute(f'UPDATE plans SET {assignments}, updated_at = ? WHERE id = ?',
                      (*(data[field] for field in changes), datetime.now(KST).isoformat(timespec='microseconds'), plan_id))
-        return get_row(conn, plan_id)
+        return overlap_result(conn, get_row(conn, plan_id))
 
 
 @router.delete('/{plan_id}', status_code=204)
