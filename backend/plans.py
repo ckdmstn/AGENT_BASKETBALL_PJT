@@ -129,13 +129,17 @@ def overlap_result(conn, plan: Plan) -> PlanSaved:
                      overlap_warnings=[warning for reason, warning in warnings.items() if reason in reasons])
 
 
+def ensure_match_available(conn, match_id: str):
+    if conn.execute('SELECT 1 FROM plans WHERE match_id = ? LIMIT 1', (match_id,)).fetchone():
+        raise HTTPException(409, '이미 저장한 경기입니다. 저장한 계획에서 확인하거나 수정해 주세요.')
+
+
 @router.post('', status_code=201, responses={409: {'description': '이미 저장한 경기'}})
 def create_plan(request: PlanCreate, db: DB) -> PlanSaved:
     now = datetime.now(KST).isoformat(timespec='microseconds')
     data = values(request)
     with db.connection(write=True) as conn:
-        if conn.execute('SELECT 1 FROM plans WHERE match_id = ? LIMIT 1', (request.match_id,)).fetchone():
-            raise HTTPException(409, '이미 저장한 경기입니다. 저장한 계획에서 확인하거나 수정해 주세요.')
+        ensure_match_available(conn, request.match_id)
         columns = ', '.join(PLAN_COLUMNS)
         placeholders = ', '.join('?' for _ in PLAN_COLUMNS)
         cursor = conn.execute(
@@ -157,12 +161,14 @@ def read_plan(plan_id: PlanID, db: DB) -> Plan:
         return get_row(conn, plan_id)
 
 
-@router.patch('/{plan_id}')
+@router.patch('/{plan_id}', responses={409: {'description': '이미 저장한 경기'}})
 def patch_plan(plan_id: PlanID, request: PlanPatch, db: DB) -> PlanSaved:
     with db.connection(write=True) as conn:
         current = get_row(conn, plan_id).model_dump(include=set(PLAN_COLUMNS))
         changes = request.model_dump(exclude_unset=True)
         merged = {**current, **changes}
+        if merged['match_id'] != current['match_id']:
+            ensure_match_available(conn, merged['match_id'])
         if merged['end_at'] is not None and merged['end_at'] <= merged['start_at']:
             raise HTTPException(422, '종료 시각은 시작 시각보다 늦어야 합니다.')
         data = values(PlanCreate.model_validate(merged))
