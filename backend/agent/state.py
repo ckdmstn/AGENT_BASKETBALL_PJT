@@ -1,7 +1,7 @@
 from datetime import date, time
 from typing import Literal, TypedDict
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, model_validator
 
 from backend.schemas import Arena, GameCandidate, GameDetail, Weather
 
@@ -87,6 +87,7 @@ class AgentError(StrictModel):
 class ChatRequest(StrictModel):
     session_id: str | None = Field(default=None, min_length=1, max_length=100, pattern=r'^[a-zA-Z0-9_-]+$')
     message: str = Field(min_length=1, max_length=4000)
+    allow_other_teams: StrictBool | None = None
 
 
 class ChatResponse(StrictModel):
@@ -110,6 +111,7 @@ class AgentState(TypedDict, total=False):
     session_id: str
     run_id: str
     user_message: str
+    allow_other_teams: bool | None
     intent: str
     conditions: dict
     active_conditions: dict

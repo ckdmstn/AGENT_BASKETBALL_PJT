@@ -37,21 +37,22 @@
         <form id="chat-form">
           <label for="message">메시지</label>
           <textarea id="message" rows="3" maxlength="4000" required placeholder="이번 주말 서울에서 SK 경기 추천해 줘"></textarea>
+          <div class="team-option">
+            <input type="checkbox" id="allow-other-teams" autocomplete="off" aria-describedby="allow-other-teams-help">
+            <label for="allow-other-teams">다른 팀 경기 추천 허용</label>
+            <small id="allow-other-teams-help">원하는 팀의 경기가 없을 경우 다른 팀 경기까지 추천할 수 있어요.</small>
+          </div>
           <div class="section-head composer"><small>Enter 전송 · Shift+Enter 줄바꿈</small><button class="primary" id="send">보내기</button></div>
         </form>
         <p id="chat-status" role="status" class="notice" hidden></p>
         <button type="button" id="retry-chat" hidden>다시 보내기</button>
         <section class="permission-panel" aria-labelledby="permission-title">
           <div class="section-head">
-            <h3 id="permission-title">다른 팀 추천</h3>
+            <h3 id="permission-title">서버에 적용된 다른 팀 추천 권한</h3>
             <span id="team-permission" class="status" role="status">상태 미확인</span>
           </div>
           <p id="team-permission-help" class="muted">아직 서버의 권한 상태를 확인하지 못했습니다.</p>
           <p id="team-relaxation" class="run-relaxation" hidden></p>
-          <div class="permission-actions">
-            <button type="button" id="allow-team">다른 팀도 허용</button>
-            <button type="button" id="revoke-team">허용 취소</button>
-          </div>
         </section>
       </section>
       <section id="recommendations" class="panel" aria-labelledby="results-title">

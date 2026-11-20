@@ -7,7 +7,7 @@ from backend.agent.events import EventBus
 from backend.agent.llm import JsonLLM
 from backend.agent.nodes import Nodes, next_alternative
 from backend.agent.permissions import TEAM_CONFIRMATION_WARNING, verify_permissions
-from backend.agent.sessions import MemorySessions
+from backend.agent.sessions import MemorySessions, restrict
 from backend.agent.state import AgentState, ChatRequest, ChatResponse, Conditions
 from backend.config import load_settings
 from backend.tools.registry import invoke, redact_result
@@ -35,15 +35,24 @@ class AgentRunner:
         self.event_subscriber = event_subscriber
         self.graph = build_graph(Nodes(llm or JsonLLM(self.settings), self.settings, tool_invoker or invoke))
 
-    def run(self, message: str, session_id: str | None = None) -> ChatResponse:
-        request = ChatRequest(message=message, session_id=session_id)
+    def run(self, message: str, session_id: str | None = None, *, allow_other_teams: bool | None = None) -> ChatResponse:
+        request = ChatRequest(message=message, session_id=session_id, allow_other_teams=allow_other_teams)
+        team_choice = request.allow_other_teams
         sid, rid = request.session_id or str(uuid4()), str(uuid4())
         started = perf_counter()
         with self.sessions.lock:
             previous = self.sessions.load(sid) or {}
             checked, permission_warnings = verify_permissions(
-                request.message, previous.get('permissions', {}), follow_up=True)
-            if previous:
+                request.message, previous.get('permissions', {}), follow_up=True, allow_other_teams=team_choice)
+            if team_choice is not None:
+                # Persist the explicit choice before fallible graph work, retaining only existing date grants.
+                previous = previous or {'conditions': Conditions().model_dump(mode='json'), 'summary': ''}
+                restrict(previous, checked)
+                previous['permissions']['team'] = team_choice
+                previous['conditions']['fallback_teams_allowed'] = team_choice
+                self.sessions.save(sid, Conditions.model_validate(previous['conditions']),
+                                   previous['summary'], previous['permissions'])
+            elif previous:
                 self.sessions.restrict_permissions(sid, checked)
                 previous = self.sessions.load(sid)
             bus = EventBus(sid, rid)
@@ -51,6 +60,7 @@ class AgentRunner:
                 bus.subscribe(self.event_subscriber)
             conditions = Conditions().model_dump(mode='json')
             state = AgentState(session_id=sid, run_id=rid, user_message=request.message, intent='plan',
+                               allow_other_teams=team_choice,
                                conditions=conditions, active_conditions=conditions.copy(),
                                last_conditions=previous.get('conditions', {}), last_summary=previous.get('summary', ''),
                                last_permissions=previous.get('permissions', {}), permissions={},
@@ -64,6 +74,8 @@ class AgentRunner:
                 result['fatal'] = True
                 result['errors'].append({'code':'INTERNAL_ERROR', 'message':'Agent 실행에 실패했습니다.', 'tool_name':None})
                 result['answer'] = '요청을 처리하지 못했습니다.'
+            if team_choice is not None and result['fatal']:
+                result['warnings'].extend(permission_warnings)
             bus.publish('RUN_FAILED' if result['fatal'] else 'RUN_COMPLETED',
                         payload={'replan_count': result['replan_count'], 'recommendation_count':len(result['eligible'])})
             response = ChatResponse(session_id=sid, run_id=rid, conditions=result['conditions'],

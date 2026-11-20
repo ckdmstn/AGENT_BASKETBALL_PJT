@@ -23,6 +23,48 @@ def make_agent(path, analyses, *, subscriber=None, llm=None):
                        sessions=SQLiteSessions(Database(path)), event_subscriber=subscriber)
 
 
+@pytest.mark.parametrize('choice', [True, False])
+def test_structured_choice_is_persisted_before_failing_analysis(tmp_path, choice):
+    path = tmp_path / 'test.sqlite3'
+    session = 'checkbox-session'
+    initial = make_agent(path, [analysis(preferred_team='LG', region='서울')])
+    first = initial.run('서울 LG 경기 추천. 대체 날짜: 2026-11-20 허용해.', session,
+                        allow_other_teams=not choice)
+
+    class FailingAnalysis(FakeLLM):
+        def complete(self, stage, payload, output_model):
+            if stage == 'analyze':
+                saved = SQLiteSessions(Database(path)).load(session)
+                assert saved['permissions'] == {'team': choice, 'date_ranges': [DATE]}
+                assert saved['conditions']['preferred_team'] == 'LG'
+                assert saved['conditions']['region'] == '서울'
+                raise LLMError('LLM_UPSTREAM_ERROR')
+            return super().complete(stage, payload, output_model)
+
+    failed = make_agent(path, [], llm=FailingAnalysis([])).run(
+        '같은 조건으로 다시 찾아 줘', session, allow_other_teams=choice)
+    assert failed.errors[0].code == 'LLM_UPSTREAM_ERROR'
+    assert failed.team_permission == ('allowed' if choice else 'denied')
+    restored = make_agent(path, [{'intent': 'follow_up'}])
+    after = restored.run('같은 조건으로 다시 찾아 줘', session)
+    assert after.conditions.preferred_team == first.conditions.preferred_team
+    assert after.conditions.region == first.conditions.region
+    assert after.conditions.date_range == first.conditions.date_range
+    assert after.conditions.alternative_date_ranges == first.conditions.alternative_date_ranges
+    assert after.conditions.fallback_teams_allowed is choice
+    assert any('preferred_team' in event['changes'] for event in after.relaxation_history) is choice
+
+
+@pytest.mark.parametrize('preferred, expect_replan', [('SK', False), ('LG', True)])
+def test_explicit_permission_keeps_original_team_and_only_relaxes_if_needed(tmp_path, preferred, expect_replan):
+    agent = make_agent(tmp_path / 'test.sqlite3', [analysis(preferred_team=preferred)])
+    response = agent.run('경기 추천해 줘', allow_other_teams=True)
+    assert response.team_permission == 'allowed'
+    assert response.conditions.preferred_team == preferred
+    assert response.active_conditions.preferred_team == (None if expect_replan else preferred)
+    assert response.replan_count == int(expect_replan)
+
+
 def test_restored_sessions_isolate_conditions_and_verified_permissions(tmp_path):
     path = tmp_path / 'test.sqlite3'
     first = make_agent(path, [analysis(preferred_team='LG', region='서울'), analysis(region='수원')])

@@ -1,5 +1,12 @@
 # 작업 01 검증 기록
 
+## Task 11 — 채팅 체크박스 권한 (2026-11-20 KST)
+
+- PR #20 병합을 포함한 `main`의 `04bb953` 기준 179개 통과. 변경 후 `.\.venv\Scripts\python.exe -m pytest -q` **191 passed in 9.59s**. `pip check`, `node --check frontend/app.js`, Git 공백 검사 통과.
+- API의 true/false 우선, 자연어 충돌 안내, 생략·null 하위 호환, 불리언 외 값 422를 확인했다. SQLite를 Analyze 시점에 읽어 두 명시 선택이 이미 저장됐는지 검증했다. 모델 실패 뒤 재시작으로 권한과 기존 날짜·팀·지역·독립 날짜 권한 보존을 확인했다.
+- `node .verification/browser/checkbox.cjs`로 Chromium 1440px·390px에서 체크박스 클릭만으로 미전송, 한 요청의 메시지와 불리언, Enter·Shift+Enter·Tab·Space, 전송 중 잠금, 503 후 선택·초안 보존, 재시도, 새 대화 해제, 새로고침·재시작 시 서버 상태를 확인했다. `checkbox-regression.cjs`의 추천·날씨·계획 409와 삭제·로그 회귀도 통과했다.
+- 브라우저는 임시 SQLite와 Mock LLM·Tool을 사용했다. 실제 외부 API·LLM, Chromium 외 브라우저는 확인하지 않았다. 권한 조회 전용 API가 없어 다시 연 세션에서 서버 상태는 다음 응답 전까지 미확인이다. 화면은 `.verification/team-checkbox-fsn0s2/desktop.png`, `mobile.png`에 있다.
+
 ## Task 10 — 동일 경기 재저장 방지 및 목록 삭제 (2026-11-20 KST)
 
 - PR #18 병합을 포함한 `main`의 `63a246e` 기준 178개 통과. 변경 후 오프라인 `.\.venv\Scripts\python.exe -m pytest -q` **179 passed in 7.64s**. `pip check`, `node --check frontend/app.js`, Git 공백 검사 통과.
