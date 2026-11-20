@@ -152,3 +152,157 @@ function dateLabel(value) {
   return date && Number.isFinite(date.getTime()) ? clock.format(date) : "시각 미확인";
 }
 
+const fieldLabels = new Map(Object.entries({
+  date_range: "날짜", start_after: "이후 시작", region: "지역", preferred_team: "선호 팀",
+  weather_preference: "날씨 선호", max_precipitation_probability_pct: "최대 강수확률",
+  fallback_teams_allowed: "다른 팀 허용", alternative_date_ranges: "대체 날짜",
+  date: "날짜", time: "시각", team: "팀", weather: "날씨", detail: "경기 상세", league: "대회", arena: "경기장",
+}));
+const statuses = new Map([["met", "조건 충족"], ["unmet", "조건 불충족"], ["unknown", "정보 미확인"]]);
+const results = byId("results");
+
+function safeLink(value) {
+  try {
+    const url = new URL(value);
+    if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) return null;
+    const link = element("a", "지도에서 경기장 보기");
+    link.href = url.href;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    return link;
+  } catch {
+    return null;
+  }
+}
+
+function statusBadge(value) {
+  const status = statuses.has(value) ? value : "unknown";
+  return element("span", statuses.get(status), "status " + status);
+}
+
+function match(assessment) {
+  const { game, detail, arena } = assessment;
+  return {
+    match_id: assessment.match_id,
+    home_team: detail?.home_team ?? game.home_team,
+    away_team: detail?.away_team ?? game.away_team,
+    venue_name: detail?.venue_name ?? game.venue_name,
+    start_at: detail?.start_at ?? game.start_at,
+    venue_address: arena?.verified_kbl_arena ? (arena.road_address || arena.address || null) : null,
+  };
+}
+
+function matchTitle(game) {
+  return game.home_team + " vs " + game.away_team;
+}
+
+function gameCard(assessment, recommended, owner) {
+  const info = match(assessment);
+  const card = element("article", null, recommended ? "entry game" : "entry");
+  const heading = element("div", null, "section-head");
+  heading.append(element("h3", matchTitle(info)), statusBadge(assessment.status));
+  card.append(heading, element("p", dateLabel(info.start_at)),
+    element("p", info.venue_name || "경기장 미확인"),
+    element("p", info.venue_address || "검증된 주소 미확인", "muted"));
+  const link = assessment.arena?.verified_kbl_arena && safeLink(assessment.arena.place_url);
+  if (link) card.append(link);
+
+  const weather = assessment.weather;
+  if (weather) {
+    const pop = weather.precipitation_probability_pct;
+    const temp = weather.temperature_c;
+    const weatherText = (weather.available ? "예보 제공" : "제공된 예보 없음")
+      + " · 강수확률 " + (pop == null ? "미확인" : pop + "%")
+      + " · 기온 " + (temp == null ? "미확인" : temp + " ℃")
+      + (weather.precipitation_mm ? " · 강수량 " + weather.precipitation_mm : "");
+    card.append(element("p", weatherText), element("small", "예보 대상 " + dateLabel(weather.forecast_at)));
+  } else {
+    card.append(element("p", "날씨 예보 미확인", "muted"));
+  }
+
+  const checks = element("ul", null, "checks");
+  for (const [key, check] of Object.entries(assessment.checks)) {
+    const item = element("li");
+    item.append(statusBadge(check.status), document.createTextNode(" " + (fieldLabels.get(key) ?? "검증 항목") + " · " + check.reason));
+    checks.append(item);
+  }
+  if (checks.children.length) {
+    card.append(element("h4", recommended ? "추천 근거" : "제외 사유"), checks);
+  }
+
+  if (recommended) {
+    const save = button("계획 저장", () => document.dispatchEvent(new CustomEvent("plan-from-match", {
+      detail: { ...info, session_id: owner },
+    })));
+    save.disabled = !info.match_id || !info.home_team || !info.away_team || !info.venue_name || !info.start_at;
+    card.append(save);
+    if (save.disabled) card.append(element("p", "필수 경기 정보가 확인되면 저장할 수 있습니다.", "muted"));
+  }
+  return card;
+}
+
+function rangeLabel(value) {
+  return value.from_date === value.to_date ? value.from_date : value.from_date + " ~ " + value.to_date;
+}
+
+function conditionLabel(key, value) {
+  if (value == null || (Array.isArray(value) && !value.length)) return "미지정";
+  if (key === "date_range") return rangeLabel(value);
+  if (key === "alternative_date_ranges") return value.map(rangeLabel).join(", ");
+  if (key === "fallback_teams_allowed") return value ? "허용" : "미허용";
+  if (key === "weather_preference" && value === "low_rain") return "낮은 강수확률 선호";
+  if (key === "max_precipitation_probability_pct") return value + "% 이하";
+  return String(value);
+}
+
+function conditionList(title, values) {
+  const group = element("div");
+  const list = element("ul");
+  for (const [key, value] of Object.entries(values)) {
+    if (fieldLabels.has(key) && value != null && (!Array.isArray(value) || value.length)) {
+      list.append(element("li", fieldLabels.get(key) + " · " + conditionLabel(key, value)));
+    }
+  }
+  group.append(element("h4", title), list.children.length ? list : element("p", "지정된 조건 없음", "muted"));
+  return group;
+}
+
+document.addEventListener("chat-result", ({ detail: response }) => {
+  results.replaceChildren();
+  byId("result-count").textContent = response ? response.recommendations.length + "경기" : "";
+  if (!response) {
+    results.append(element("p", "채팅을 보내면 추천 경기와 조건 검증 결과가 여기에 표시됩니다.", "empty"));
+    return;
+  }
+  if (!response.recommendations.length) {
+    const unavailable = response.events.some((event) => event.event_type === "RUN_FAILED");
+    const lookedUp = response.events.some((event) => event.event_type === "TOOL_RESPONDED");
+    const emptyMessage = unavailable ? "추천을 완료하지 못했습니다."
+      : response.errors.some((error) => error.code !== "NO_RESULT") ? "조회 실패로 추천 경기를 확인하지 못했습니다."
+      : lookedUp ? "조건에 맞는 추천 경기가 없습니다." : "이번 대화에서 경기 조회를 실행하지 않았습니다.";
+    results.append(element("p", emptyMessage, "empty"));
+  }
+  for (const recommendation of response.recommendations) {
+    results.append(gameCard(recommendation, true, response.session_id));
+  }
+  for (const warning of response.warnings) results.append(element("p", warning, "notice warning"));
+
+  const conditions = element("details");
+  conditions.open = response.replan_count > 0;
+  const grid = element("div", null, "condition-grid");
+  grid.append(conditionList("원래 요청한 조건", response.conditions),
+    conditionList("실제 적용된 조건", response.active_conditions));
+  conditions.append(element("summary", "요청 조건 및 재계획 " + response.replan_count + "회"), grid);
+  for (const step of response.relaxation_history) {
+    conditions.append(conditionList("재계획 " + step.attempt + "회차", step.changes));
+  }
+  results.append(conditions);
+
+  if (response.excluded.length) {
+    const excluded = element("details");
+    excluded.append(element("summary", "제외 후보 " + response.excluded.length + "경기"));
+    for (const assessment of response.excluded) excluded.append(gameCard(assessment, false));
+    results.append(excluded);
+  }
+});
+
