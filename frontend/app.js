@@ -397,18 +397,10 @@ document.addEventListener("chat-result", ({ detail: response }) => {
 
 const planDialog = byId("plan-dialog");
 const planForm = byId("plan-form");
-const planEnd = byId("end-at");
 const planNote = byId("plan-note");
 let selectedPlan = null;
 let planBusy = false;
 let planLoad = 0;
-
-function kstInput(value) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return "";
-  return new Date(date.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 16);
-}
 
 function openPlan(plan) {
   if (planDialog.open || planBusy) return;
@@ -419,7 +411,6 @@ function openPlan(plan) {
     element("p", dateLabel(plan.start_at) + " · " + plan.venue_name));
   if (plan.venue_address) summary.append(element("p", plan.venue_address));
   if (plan.id) summary.append(element("small", "저장 " + dateLabel(plan.created_at) + " · 수정 " + dateLabel(plan.updated_at)));
-  planEnd.value = kstInput(plan.end_at);
   planNote.value = plan.note ?? "";
   byId("delete-plan").hidden = !plan.id;
   notice("plan-error", "");
@@ -428,7 +419,7 @@ function openPlan(plan) {
 
 function setPlanBusy(value) {
   planBusy = value;
-  for (const id of ["close-plan", "delete-plan", "save-plan", "end-at", "plan-note"]) byId(id).disabled = value;
+  for (const id of ["close-plan", "delete-plan", "save-plan", "plan-note"]) byId(id).disabled = value;
 }
 
 async function loadPlans() {
@@ -476,29 +467,20 @@ planForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (planBusy || !selectedPlan) return;
   const plan = selectedPlan;
-  const changed = {};
-  const end = planEnd.value ? planEnd.value + ":00+09:00" : null;
   const note = planNote.value.trim() || null;
-  if (planEnd.value !== kstInput(plan.end_at)) changed.end_at = end;
-  if (planNote.value !== (plan.note ?? "") && note !== (plan.note ?? null)) changed.note = note;
-  if (plan.id && !Object.keys(changed).length) {
+  if (plan.id && (planNote.value === (plan.note ?? "") || note === (plan.note ?? null))) {
     notice("plan-error", "변경된 항목이 없습니다.");
-    return;
-  }
-  const effectiveEnd = Object.hasOwn(changed, "end_at") ? end : (plan.end_at ?? end);
-  if (effectiveEnd && Date.parse(effectiveEnd) <= Date.parse(plan.start_at)) {
-    notice("plan-error", "종료 시각은 경기 시작보다 늦어야 합니다.", "error");
     return;
   }
   setPlanBusy(true);
   try {
-    const saved = plan.id ? await api("/api/plans/" + plan.id, "PATCH", changed)
-      : await api("/api/plans", "POST", { ...plan, end_at: end, note });
+    const saved = plan.id ? await api("/api/plans/" + plan.id, "PATCH", { note })
+      : await api("/api/plans", "POST", { ...plan, end_at: null, note });
     planDialog.close();
     const confirmation = notice("plan-notice", plan.id ? "계획을 수정했습니다." : "계획을 저장했습니다.", "success");
     if (saved.overlap_warnings.length || saved.overlapping_plan_ids.length) {
       const warning = element("div", null, "notice warning");
-      warning.append(element("strong", "일정 경고"));
+      warning.append(element("strong", "일정 확인"));
       for (const message of saved.overlap_warnings) warning.append(element("p", message));
       if (saved.overlapping_plan_ids.length) {
         warning.append(element("p", "겹치는 계획 ID " + saved.overlapping_plan_ids.join(", ")));
