@@ -1,5 +1,28 @@
 # 작업 01 검증 기록
 
+## Task 07 — 공식 경기장 주소 확대 (2026-11-20 KST)
+
+12월 1~14일 KBL 정규리그 일정에 나타난 10개 홈 구단과 9개 고유 경기장을 대상으로 조사했다. 카카오 검색에서 아래 이름·도로명주소와 유효한 좌표를 확인했고, 각 표의 등록 결과는 해당 조회 범위 기준이다.
+
+| 홈 구단 | KBL API 표기 | 공식 시설명·허용 별칭 | 공식 도로명주소 | 카카오 일치 후보 / 등록 | 공식 출처 |
+| --- | --- | --- | --- | --- | --- |
+| 창원 LG | 창원체육관 | 창원체육관, 창원스포츠파크 창원체육관 | 경상남도 창원시 성산구 원이대로 450 | 창원스포츠파크 창원체육관 / 신규 | [구단](https://sakers.kbl.or.kr/team/stadium), [창원시설공단 시설](https://www.cwsisul.or.kr/_chsports/_sub01/sub01_02.html), [주소](https://www.cwsisul.or.kr/_chsports/_sub04/sub04_01.html) |
+| 서울 SK·서울 삼성 | 잠실학생체육관 | 서울특별시교육청 학생체육관, 잠실학생체육관 | 서울 송파구 올림픽로 25 | 서울특별시교육청 학생체육관 / 유지 | [서울시교육청](https://ssg.sen.go.kr/fus/MI000000000000000366/html/cont0010v.do), [서울 삼성](https://thunders.kbl.or.kr/team/stadium) |
+| 안양 정관장 | 안양 정관장 아레나 | 안양 정관장 아레나 | 경기 안양시 동안구 평촌대로 389 | 안양정관장아레나 / 유지 | [정관장](https://www.kgc.co.kr/intro/kgc-introduction/affiliate.do) |
+| 수원 KT | 수원 KT 소닉붐 아레나 | 수원 KT 소닉붐 아레나, KT 소닉붐 아레나, 서수원칠보체육관 | 경기 수원시 권선구 서수원로577번길 171 | 수원KT소닉붐아레나 / 유지 | [KBL 미디어 가이드](https://www.kbl.or.kr/upfiles/ebook/2425_media_guidebook.pdf) |
+| 고양 소노 | 고양소노아레나 | 고양 소노 아레나, 고양체육관 | 경기 고양시 일산서구 중앙로 1601 | 고양체육관 / 신규 | [구단](https://skygunners.kbl.or.kr/team/stadium), [고양도시관리공사](https://yeyak.gys.or.kr/fmcs/11) |
+| 부산 KCC | 부산사직체육관 | 사직종합운동장 실내체육관, 부산 사직실내체육관, 부산사직종합운동장 실내체육관 | 부산 동래구 사직로 55-32 | 부산사직종합운동장 실내체육관 / 신규 | [부산시 주소](https://www.busan.go.kr/sports/main/3?action=view&no=127), [운영기관](https://www.busan.go.kr/stadium/sfcimplexindoors), [KBL 경기 기록](https://www.kbl.or.kr/match/record/S49G01N52/20261103) |
+| 대구 한국가스공사 | 대구체육관 | 대구체육관, 대구실내체육관 | 대구 북구 대구체육관로 39 | 대구실내체육관 / 신규 | [대구시 자료](https://www.daegu.go.kr/Images/2014_FIN.pdf), [KBL 미디어 가이드](https://www.kbl.or.kr/upfiles/ebook/2425_media_guidebook.pdf) |
+| 울산 현대모비스 | 울산동천체육관 | 울산동천체육관, 동천체육관 | 울산 중구 염포로 85 | 동천체육관 / 신규 | [구단](https://phoebus.kbl.or.kr/team/stadium), [울산시](https://www.ulsan.go.kr/tour/kor/unit/attrctn/view.do?mId=001002008000000000&unqId=38) |
+| 원주 DB | 원주DB프로미아레나 | 원주DB프로미아레나, 원주종합체육관 | 강원특별자치도 원주시 서원대로 281 | 원주DB프로미아레나 / 신규 | [구단](https://promy.kbl.or.kr/team/stadium), [원주시설관리공단](https://cms.wfmc.kr/web/lay1/S1T156C179/contents.do) |
+
+- 조사 범위에서 미등록 홈 구단은 없다. 잠실실내체육관은 동일 도로명주소의 다른 시설이며 조사 기간 KBL 홈경기장 표기에 없어서 등록하지 않았다. 부산·울산 보조경기장과 기타 부속 시설을 허용 별칭으로 사용하지 않는다.
+- 부산은 API 표기 그대로 검색하면 HTTP 200/`NO_RESULT`였다. 공식 일정에 쓰인 `부산 사직실내체육관`을 검색어로 사용하면 본시설이 조회되며, 검증에는 원래 KBL 이름과 주소 대조를 계속 사용한다.
+- 창원은 창원시설공단 운영 시설과 구단 홈코트 안내를 대조했다. 실제 카카오 위치는 위도 35.2327367366309, 경도 128.666283189427이다. [카카오 장소](http://place.map.kakao.com/17808355)
+- 실제 KBL 목록·상세와 카카오는 모두 HTTP 200. 2026-12-03 19:00 `S49G01N79` 창원 LG–안양 정관장의 시작 시각·팀·장소가 일치했다. 이 도구 응답과 Mock LLM을 조합했을 때 주소·창원 지역·LG·정규리그·날짜가 각각 `met`이고 날씨 조건 없는 요청에서 최종 추천됐다. 서울 지역 `unmet`, 검색 실패 시 지역 `unknown`은 오프라인 회귀 테스트에서 확인했다.
+- 경기 시각에 검증 좌표를 전달한 기상청 Tool은 범위 밖 `UNSUPPORTED_DATE`를 반환했으며 외부 HTTP 요청은 발생하지 않았다. 날씨 조건을 요청하면 해당 조건은 `unknown`이며 날씨가 확인된 추천으로 처리되지 않는다.
+- `.verification/arena_probe.py`와 `.verification/changwon_graph.py`는 로컬 실제 Tool 검증에 사용했다. 전체 pytest **174 passed in 5.44s**(기존 151개, 신규 23개), `pip check`, `node --check frontend/app.js`, `git diff --check` 통과. Mock Chromium 스모크에서 개선된 사유의 추천·제외 카드 표시, 계획 CRUD, 로그 UI를 재검증했다. 실제 LLM과 경기 시각 예보 성공은 이번 검증에서 확인하지 않았다.
+
 ## PR #12 리뷰 보완 — 권한 전용 명령 (2026-11-20 KST)
 
 - 기존 세션의 독립 허용·철회 문장과 첫 대화의 정확한 버튼 문장을 Analyze LLM 호출 전에 분류한다. 권한 판정은 기존 `verify_permissions()`가 수행한다. 기존 조건, 철회 선반영·세션 저장, 일반 자연어 분석은 유지한다. Analyze LLM을 호출하지 않은 턴은 분석 단계의 시작·완료 이벤트만 남긴다.
