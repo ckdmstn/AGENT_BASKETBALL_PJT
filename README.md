@@ -67,35 +67,25 @@ python -m venv .venv
 
 ## 화면 캡처
 
-아래는 임시 SQLite가 연결된 로컬 FastAPI 앱의 Chromium 캡처다. Mock LLM·외부 Tool 데이터를 사용했으며 오류 화면에는 테스트용 실패 응답을 포함했다.
+로컬 FastAPI 앱을 1440px 데스크톱 Chromium에서 실행했다. 시연에는 임시 SQLite를 사용했다.
 
-![메인 화면과 다른 팀 추천 체크박스 · Mock](docs/screenshots/final-mock-main.png)
+![메인 화면 · 시연 요청과 다른 팀 허용 선택](docs/screenshots/demo-main.png)
 
-![추천 경기 상세와 재계획 결과 · Mock](docs/screenshots/final-mock-recommendation.png)
+**실제 추천.** 2026년 12월 3일 창원에서 저녁 6시 이후 열리는 정규리그 경기를 요청했다. GMS·KBL·Kakao 연동으로 창원 LG 대 안양 정관장 경기와 창원체육관을 확인했다.
 
-![제외 후보 및 검증 결과 · Mock](docs/screenshots/final-mock-excluded.png)
+![실제 연동 · 창원 LG 대 안양 정관장 추천과 경기장 검증](docs/screenshots/demo-live-recommendation.png)
 
-![계획 생성 확인 · Mock](docs/screenshots/final-mock-create.png)
+**Mock 시연.** 같은 날 창원의 서울 SK 경기를 우선 찾고, 다른 팀 추천을 허용했다. 팀 조건을 완화해 창원 LG 경기를 추천하고, 예시 강수확률 20%로 날씨 조건을 확인했다. 화면의 예보 값은 시연용이다. 이어서 경기 계획을 저장하고 메모를 편집한 뒤 삭제했다.
 
-![중복 저장 409 안내 · Mock](docs/screenshots/final-mock-409.png)
+![Mock · 날씨와 추천 근거, 선호 팀 완화 전후](docs/screenshots/demo-mock-replan-weather.png)
 
-![저장한 계획 목록 · Mock](docs/screenshots/f3016-mock-01-list-before.png)
+![Mock · 경기 계획 저장](docs/screenshots/demo-mock-plan-saved.png)
 
-![계획 핵심 정보 편집 · Mock](docs/screenshots/f3016-mock-02-edit.png)
+![Mock · 저장한 계획 편집](docs/screenshots/demo-mock-plan-edit.png)
 
-![수정 후 목록 · Mock](docs/screenshots/f3016-mock-03-list-updated.png)
+![Mock · 계획 삭제 후 빈 목록](docs/screenshots/demo-mock-plan-deleted.png)
 
-![수정 후 상세 · Mock](docs/screenshots/f3016-mock-04-detail-updated.png)
-
-![삭제 후 목록 · Mock](docs/screenshots/f3016-mock-05-list-after-delete.png)
-
-![실행 로그와 캐시 재사용 · Mock](docs/screenshots/final-mock-timeline.png)
-
-![저장소 오류 안내 · Mock](docs/screenshots/final-mock-error.png)
-
-![API 키 누락 안내 · Mock](docs/screenshots/final-mock-missing-key.png)
-
-![FastAPI Swagger · Mock](docs/screenshots/final-mock-swagger.png)
+![Mock · 재계획과 Tool 결과 캐시가 표시된 실행 로그](docs/screenshots/demo-mock-agent-log.png)
 
 ## 검증 결과와 남은 항목
 
