@@ -88,14 +88,14 @@ def test_logging_is_structured_and_unsubscribes(tmp_path):
         rows = [dict(row) for row in conn.execute('SELECT * FROM agent_events ORDER BY sequence_no')]
     assert [row['sequence_no'] for row in rows] == [1, 2, 3]
     assert [json.loads(row['payload']) for row in rows] == [
-        {'intent': 'plan', 'changed_fields': ['region']}, {},
+        {'reason_code': 'intent_and_condition_extraction', 'intent': 'plan', 'changed_fields': ['region']}, {},
         {'ok': False, 'error_code': 'UPSTREAM_ERROR'},
     ]
     assert all(value not in repr(rows) for value in (secret, 'private transcript', 'raw traceback'))
     assert bus.events[-1].event_type == 'RUN_COMPLETED'
 
 
-def test_logging_database_failure_does_not_interrupt_agent(tmp_path, monkeypatch):
+def test_logging_database_failure_does_not_interrupt_agent(tmp_path, monkeypatch, caplog):
     path = tmp_path / 'test.sqlite3'
     logger_db = Database(path)
     logger = LoggingAgent(logger_db, Settings())
@@ -108,12 +108,15 @@ def test_logging_database_failure_does_not_interrupt_agent(tmp_path, monkeypatch
     monkeypatch.setattr(logger_db, 'connection', broken_database)
     agent = make_agent(path, [analysis(), analysis()], subscriber=logger)
     for subscriber in (logger, None):
+        caplog.clear()
         agent.event_subscriber = subscriber
         result = agent.run('경기 추천', 'a')
         assert len(result.recommendations) == 1
         assert result.errors == []
         assert result.events[-1]['event_type'] == 'RUN_COMPLETED'
         assert 'raw exception text' not in result.model_dump_json()
+        assert caplog.messages == ['Agent event was not saved to SQLite.'] * (len(result.events) if subscriber else 0)
+        assert all(record.exc_info is None for record in caplog.records)
     with Database(path).connection() as conn:
         assert conn.execute('SELECT COUNT(*) FROM agent_events').fetchone()[0] == 0
 
@@ -130,3 +133,24 @@ def test_failed_run_event_keeps_only_safe_metadata(tmp_path):
     assert rows[-1]['event_type'] == 'RUN_FAILED'
     assert json.loads(rows[-1]['payload']) == {'replan_count': 0, 'recommendation_count': 0}
     assert 'private' not in repr(rows)
+
+
+def test_decision_reason_codes_come_from_application_not_event_payload(tmp_path):
+    db = Database(tmp_path / 'test.sqlite3')
+    bus = EventBus('session', 'run')
+    bus.subscribe(LoggingAgent(db, Settings()))
+    injected = {'reason': 'private model output', 'reason_code': 'private injected code'}
+    bus.publish('LLM_DECISION', node_name='plan', payload={**injected, 'tools': ['search_kbl_games']})
+    bus.publish('LLM_DECISION', node_name='respond', payload={**injected, 'factual_output': 'python_verified'})
+    bus.publish('REPLAN_STARTED', node_name='replan',
+                payload={**injected, 'attempt': 1, 'changes': {'preferred_team': 'private value'}})
+    bus.publish('LLM_DECISION', node_name='unknown', payload=injected)
+    with db.connection() as conn:
+        payloads = [json.loads(row['payload']) for row in conn.execute(
+            'SELECT payload FROM agent_events ORDER BY sequence_no')]
+    assert payloads == [
+        {'reason_code': 'tools_for_condition_verification', 'tools': ['search_kbl_games']},
+        {'reason_code': 'verified_facts_rendering', 'factual_output': 'python_verified'},
+        {'reason_code': 'authorized_condition_relaxation', 'attempt': 1, 'changed_fields': ['preferred_team']},
+        {},
+    ]

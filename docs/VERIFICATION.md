@@ -1,5 +1,12 @@
 # 작업 01 검증 기록
 
+## PR #6 리뷰 보완 — 판단 이유와 로그 저장 실패 (2026-11-20)
+
+- 새 `LLM_DECISION`에는 노드에 따라 `intent_and_condition_extraction`, `tools_for_condition_verification`, `verified_facts_rendering` 코드가 저장된다. `REPLAN_STARTED`에는 `authorized_condition_relaxation`이 추가된다. 기존 정형 필드는 유지한다. 코드는 애플리케이션이 생성하며 자유 텍스트 판단 근거와 입력에서 주입된 코드는 저장하지 않는다. 이전 로그에는 코드가 없을 수 있다.
+- SQLite 이벤트 쓰기가 실패하면 표준 로거에 고정 WARNING을 남긴다. 경고에는 식별자·payload·예외 원문·traceback이 없다. 해당 이벤트는 누락될 수 있으며 자동 재시도와 DB 재기록은 없다. 경고는 누락 발생을 알려주며 이벤트별 추적 정보는 제공하지 않는다.
+- 기존 저장 실패 테스트에 고정 경고와 예외 비노출 검증을 추가했다. 신규 테스트 1개는 계획·응답·재계획 이벤트에 주입된 자유 텍스트 및 코드가 저장되지 않는지 확인한다.
+- `.\.venv\Scripts\python.exe -m pytest -q`는 **143 passed in 9.11s**였다. 기존 142개를 유지했다. `.\.venv\Scripts\python.exe -m pip check`는 `No broken requirements found.`를 반환했다. 실제 외부 API와 LLM은 재호출하지 않았다.
+
 ## Task 03 — SQLite 계획 CRUD·세션·Logging Agent (2026-11-20)
 
 | 검증 | 결과 |
