@@ -10,10 +10,10 @@ function element(tag, text, className) {
 const sessionKey = "kbl-go.session";
 const chatForm = byId("chat-form");
 const messageInput = byId("message");
+const allowOtherTeams = byId("allow-other-teams");
 let sessionId = null;
 let pending = false;
 let retryMessage = null;
-let teamPermission = "unknown";
 try {
   const saved = localStorage.getItem(sessionKey);
   if (saved && /^[a-zA-Z0-9_-]{1,100}$/.test(saved)) sessionId = saved;
@@ -84,25 +84,19 @@ function assistantMessage(response) {
 
 function busyChat(busy) {
   pending = busy;
-  for (const id of ["new-chat", "send", "message", "retry-chat"]) byId(id).disabled = busy;
+  for (const id of ["new-chat", "send", "message", "retry-chat", "allow-other-teams"]) byId(id).disabled = busy;
   byId("send").textContent = busy ? "추천 요청 중…" : "보내기";
-  updatePermissionButtons();
 }
 
 const permissionLabels = new Map([
   ["denied", ["미허용", "선호 팀 조건을 유지합니다.", ""]],
   ["allowed", ["허용됨", "조건에 맞는 선호 팀 경기가 없으면 다른 팀도 검토할 수 있습니다.", "met"]],
-  ["confirmation_required", ["확인 필요", "다른 팀 추천을 허용하시겠어요? 조건에 맞는 선호 팀 경기가 없을 때 다른 팀도 추천받으려면 ‘다른 팀도 허용’을 선택하세요.", "unknown"]],
+  ["confirmation_required", ["확인 필요", "다른 팀 추천을 원하면 체크박스를 선택하고 메시지를 보내세요.", "unknown"]],
   ["unknown", ["상태 미확인", "아직 서버의 권한 상태를 확인하지 못했습니다.", ""]],
 ]);
 
-function updatePermissionButtons() {
-  byId("allow-team").disabled = pending || teamPermission === "allowed";
-  byId("revoke-team").disabled = pending || teamPermission === "denied" || teamPermission === "confirmation_required";
-}
-
 function showPermission(response = null) {
-  teamPermission = permissionLabels.has(response?.team_permission) ? response.team_permission
+  const teamPermission = permissionLabels.has(response?.team_permission) ? response.team_permission
     : response || sessionId ? "unknown" : "denied";
   const [label, help, style] = permissionLabels.get(teamPermission);
   const badge = byId("team-permission");
@@ -114,19 +108,19 @@ function showPermission(response = null) {
     && response.relaxation_history?.some(({ changes }) => changes?.preferred_team === null);
   relaxation.textContent = teamRelaxed ? "이번 실행에서 선호 팀 조건이 완화됐습니다." : "";
   relaxation.hidden = !teamRelaxed;
-  updatePermissionButtons();
 }
 
-async function sendChat(message, { retry = false, preserveDraft = false } = {}) {
+async function sendChat(message, { retry = false } = {}) {
   if (!message || pending) return;
   if (!retry) bubble(message, true);
-  if (!retry && !preserveDraft) messageInput.value = "";
+  if (!retry) messageInput.value = "";
+  const teamChoice = allowOtherTeams.checked;
   byId("retry-chat").hidden = true;
   retryMessage = null;
   busyChat(true);
   notice("chat-status", "Agent가 요청을 처리하고 있습니다.");
   try {
-    const response = await api("/api/chat", "POST", { session_id: sessionId, message });
+    const response = await api("/api/chat", "POST", { session_id: sessionId, message, allow_other_teams: teamChoice });
     if (!response || typeof response.answer !== "string" || !response.session_id) {
       throw new Error("추천 결과를 읽을 수 없습니다. 다시 시도해 주세요.");
     }
@@ -135,6 +129,9 @@ async function sendChat(message, { retry = false, preserveDraft = false } = {}) 
     assistantMessage(response);
     document.dispatchEvent(new CustomEvent("chat-result", { detail: response }));
     const failed = response.events.some((event) => event.event_type === "RUN_FAILED");
+    if (!failed && ["allowed", "denied"].includes(response.team_permission)) {
+      allowOtherTeams.checked = response.team_permission === "allowed";
+    }
     notice("chat-status", failed ? "추천 요청을 완료하지 못했습니다. 다시 시도할 수 있습니다."
       : hasLookupIssue(response) ? "일부 조회가 실패했습니다. 추천과 제외 후보의 상태를 확인해 주세요." : "", failed ? "error" : "warning");
     if (failed) retryMessage = message;
@@ -160,10 +157,9 @@ messageInput.addEventListener("keydown", (event) => {
   }
 });
 byId("retry-chat").addEventListener("click", () => sendChat(retryMessage, { retry: true }));
-byId("allow-team").addEventListener("click", () => sendChat("다른 팀도 괜찮아.", { preserveDraft: true }));
-byId("revoke-team").addEventListener("click", () => sendChat("다른 팀은 안 돼.", { preserveDraft: true }));
 byId("new-chat").addEventListener("click", () => {
   setSession(null);
+  allowOtherTeams.checked = false;
   showPermission();
   retryMessage = null;
   byId("retry-chat").hidden = true;
