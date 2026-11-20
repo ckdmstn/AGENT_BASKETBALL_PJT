@@ -87,6 +87,7 @@ textarea { resize: vertical; }
 .primary:hover:not(:disabled) { background: var(--primary-hover); }
 .primary:active:not(:disabled) { background: var(--primary-hover); box-shadow: inset 0 0 0 1px var(--surface); }
 .danger { color: var(--error-text); }
+.plan-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
 .notice { padding: .7rem .85rem; background: var(--soft); border-left: .25rem solid var(--primary); border-radius: .35rem; overflow-wrap: anywhere; }
 .notice.error { background: var(--error-bg); border-color: var(--error-border); }
 .notice.success { background: var(--success-bg); border-color: var(--success-border); }
