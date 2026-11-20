@@ -3,7 +3,7 @@ import re
 from copy import deepcopy
 from datetime import datetime
 
-from backend.agent.evaluation import assess, requested_weather, team_matches, verified_arena
+from backend.agent.evaluation import ARENA_SEARCH_NAMES, assess, requested_weather, team_matches, verified_arena
 from backend.agent.llm import LLMError
 from backend.agent.permissions import verify_permissions
 from backend.agent.state import Analysis, Conditions, Narration, WorkPlan
@@ -140,11 +140,11 @@ class Nodes:
             entry = {'code': code, 'message': value['error']['message'], 'tool_name': name}
             if entry not in state['errors']:
                 state['errors'].append(entry)
-        return value['data'] if value['ok'] else None
+        return value['data'] if value['ok'] else None, code
 
     def execute_tools(self, state):
         c = Conditions.model_validate(state['active_conditions'])
-        rows = self.call(state, 'search_kbl_games', {'from_date': c.date_range.from_date.isoformat(), 'to_date': c.date_range.to_date.isoformat()})
+        rows, _ = self.call(state, 'search_kbl_games', {'from_date': c.date_range.from_date.isoformat(), 'to_date': c.date_range.to_date.isoformat()})
         state['games'] = rows or []
         for g in state['games']:
             if g.get('season_category') != 'R' or g.get('season_grade') != 1:
@@ -152,7 +152,7 @@ class Nodes:
             if c.preferred_team and not team_matches(c.preferred_team, g):
                 continue
             mid = g['match_id']
-            detail = self.call(state, 'get_kbl_game_detail', {'match_id': mid})
+            detail, _ = self.call(state, 'get_kbl_game_detail', {'match_id': mid})
             if not detail:
                 continue
             state['details'][mid] = detail
@@ -160,13 +160,14 @@ class Nodes:
             if not venue:
                 continue
             # Do not inject requested region into search: it could select a wrong venue.
-            places = self.call(state, 'search_arena', {'venue_name': venue})
-            selected = verified_arena(venue, places or [])
+            places, error = self.call(state, 'search_arena', {'venue_name': ARENA_SEARCH_NAMES.get(venue, venue)})
+            selected, reason = verified_arena(venue, places or [], error)
+            state['arena_reasons'][mid] = reason
             if not selected:
                 continue
             state['arena_info'][mid] = selected.model_dump(mode='json')
             if 'get_weather' in state['tasks'] and detail.get('start_at') and selected.lat is not None and selected.lon is not None:
-                weather = self.call(state, 'get_weather', {'date_time': detail['start_at'], 'lat': selected.lat, 'lon': selected.lon})
+                weather, _ = self.call(state, 'get_weather', {'date_time': detail['start_at'], 'lat': selected.lat, 'lon': selected.lon})
                 if weather:
                     state['weather_info'][mid] = weather
 
@@ -175,7 +176,8 @@ class Nodes:
         c = Conditions.model_validate(state['active_conditions'])
         for g in state['games']:
             mid = g['match_id']
-            result = assess(g, state['details'].get(mid), state['arena_info'].get(mid), state['weather_info'].get(mid), c)
+            result = assess(g, state['details'].get(mid), state['arena_info'].get(mid), state['weather_info'].get(mid), c,
+                            arena_reason=state['arena_reasons'].get(mid))
             target = 'eligible' if result.status == 'met' else 'excluded'
             state[target].append(result.model_dump(mode='json'))
         if requested_weather(c):

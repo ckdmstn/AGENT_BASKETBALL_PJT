@@ -54,7 +54,7 @@ class AgentRunner:
                                conditions=conditions, active_conditions=conditions.copy(),
                                last_conditions=previous.get('conditions', {}), last_summary=previous.get('summary', ''),
                                last_permissions=previous.get('permissions', {}), permissions={},
-                               tasks=[], task_results={}, games=[], details={}, arena_info={}, weather_info={},
+                               tasks=[], task_results={}, games=[], details={}, arena_info={}, arena_reasons={}, weather_info={},
                                eligible=[], excluded=[], replan_count=0, max_replans=3, relaxation_history=[],
                                answer='', errors=[], warnings=[], fatal=False, bus=bus)
             try:
