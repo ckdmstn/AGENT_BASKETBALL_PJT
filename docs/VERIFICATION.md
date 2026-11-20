@@ -405,3 +405,22 @@ KBL 최소 실측 샘플:
 - GMS LLM, KBL 목록·상세, Kakao 장소 Tool을 연결해 2026-12-03 창원 오후 6시 이후 정규리그 요청을 실행했다. 오류 없이 창원체육관의 S49G01N79 한 건이 추천됐으며 19,595.33 ms가 걸렸다.
 - 기상청 단기예보는 창원 지점의 현재 시각으로 별도 조회해 HTTP 200과 서비스 코드 00을 확인했다. 경기 당일 예보가 제공되는 시간 안에서 4개 제공처를 한 요청에 연결하는 시험과 실연동 반복 지연 측정은 남았다.
 - NF3005는 실제 서비스 지연의 반복 측정 및 사용성 판정 근거가 필요하다. NF3007은 KBL에 별도 API 사용 허가 및 호출 한도를 확인하거나 허가가 확인된 데이터 출처로 바꿔야 한다. 두 항목과 연동된 최종 제출 점검을 BLOCKED로 기록했다. [체크리스트](CHECKLIST.md) · [외부 제공처 조건](TOOL_SPEC.md)
+
+### 기존 UI 검증 캡처
+
+다음은 Task 13과 F3016에서 사용한 Mock 검증 증빙이다. 정상 사용자 흐름을 촬영한 화면은 [README](../README.md#화면-캡처)에 있다.
+
+- [메인 화면과 다른 팀 추천 체크박스](screenshots/final-mock-main.png)
+- [추천 경기 상세와 재계획 결과](screenshots/final-mock-recommendation.png)
+- [제외 후보 및 검증 결과](screenshots/final-mock-excluded.png)
+- [계획 생성 확인](screenshots/final-mock-create.png)
+- [중복 저장 409 안내](screenshots/final-mock-409.png)
+- [저장한 계획 목록](screenshots/f3016-mock-01-list-before.png)
+- [계획 핵심 정보 편집](screenshots/f3016-mock-02-edit.png)
+- [수정 후 목록](screenshots/f3016-mock-03-list-updated.png)
+- [수정 후 상세](screenshots/f3016-mock-04-detail-updated.png)
+- [삭제 후 목록](screenshots/f3016-mock-05-list-after-delete.png)
+- [실행 로그와 캐시 재사용](screenshots/final-mock-timeline.png)
+- [저장소 오류 안내](screenshots/final-mock-error.png)
+- [API 키 누락 안내](screenshots/final-mock-missing-key.png)
+- [FastAPI Swagger](screenshots/final-mock-swagger.png)
