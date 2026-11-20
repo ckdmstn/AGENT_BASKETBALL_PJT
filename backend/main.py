@@ -7,8 +7,10 @@ from pydantic import BaseModel
 
 from backend.agent.graph import AgentRunner
 from backend.agent.state import ChatRequest, ChatResponse
+from backend.plans import router as plans_router
 
 app = FastAPI(title='KBL GO', version='0.2.0', description='LangGraph KBL 직관 추천 Agent')
+app.include_router(plans_router)
 
 
 @lru_cache
