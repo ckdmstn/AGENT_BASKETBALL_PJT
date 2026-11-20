@@ -30,4 +30,3 @@ def test_static_routes_leave_api_and_swagger_available():
         paths = client.get('/openapi.json').json()['paths']
     assert {'/api/chat', '/api/plans', '/api/plans/{plan_id}', '/api/logs', '/api/logs/{session_id}'} <= paths.keys()
     assert '/' not in paths
-

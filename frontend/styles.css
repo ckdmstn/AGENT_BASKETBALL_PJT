@@ -87,4 +87,3 @@ dialog::backdrop { background: #000a; }
   .court { opacity: .45; width: 63%; right: -15%; }
   .condition-grid { grid-template-columns: 1fr; }
 }
-

@@ -558,4 +558,3 @@ async function loadLogs() {
 document.addEventListener("chat-result", loadLogs);
 byId("refresh-logs").addEventListener("click", loadLogs);
 loadLogs();
-
