@@ -1,7 +1,7 @@
 # KBL GO
 
 한국프로농구 AI 직관 플래너. Issue #1의 외부 Tool에 Issue #3의 LangGraph Main Agent와 채팅 API를 연결했다.
-설계 기준은 [PROJECT_PLAN](docs/PROJECT_PLAN.md)이다. SQLite CRUD·별도 Logging Agent·UI·RAG는 다음 작업 범위다.
+설계 기준은 [PROJECT_PLAN](docs/PROJECT_PLAN.md)이다. SQLite 직관 계획 관리·대화 세션 저장·실행 로그 조회를 지원한다. UI와 RAG는 후속 작업이다.
 
 ## Windows / PowerShell 실행
 
@@ -28,6 +28,22 @@ Swagger에서 `POST /api/chat`을 열고 다음 요청을 실행한다. 실제 �
 ```
 
 같은 `session_id`로 `팀만 LG로 바꿔 줘. 없으면 다른 팀도 괜찮아.`를 요청하면 날짜·지역·시간·강수 조건을 유지한다. 세션 ID를 생략하면 새 ID를 발급한다. 응답의 `conditions`는 사용자가 요청한 원조건, `active_conditions`는 허용된 재계획 적용 조건이다. 완화한 조건이 다음 발화의 원조건을 덮어쓰지 않는다.
+
+## 직관 계획 및 실행 로그 API
+
+| 메서드와 경로 | 응답 |
+| --- | --- |
+| `POST /api/plans` | 201 및 `plan`, `overlapping_plan_ids`, `overlap_warnings` |
+| `GET /api/plans`, `GET /api/plans/{plan_id}` | 계획 목록과 상세 |
+| `PATCH /api/plans/{plan_id}` | 명시된 필드 변경 후 계획 및 중복 경고 |
+| `DELETE /api/plans/{plan_id}` | 204 |
+| `GET /api/logs` | 세션별 실행 수, 이벤트 수, 마지막 발생 시각 |
+| `GET /api/logs/{session_id}` | 실행별 이벤트 상세. 실행 내 순서는 `sequence_no` 기준 |
+| `DELETE /api/logs/{session_id}` | 해당 세션의 로그만 삭제하고 204 반환 |
+
+계획 생성에 `match_id`, `home_team`, `away_team`, `venue_name`, `start_at`이 필요하다. `session_id`, `venue_address`, `note`, `end_at`은 선택 항목이다. 시간대가 포함된 시각을 입력하면 KST로 저장하고 `game_date`는 KST 시작일로 반환한다. 겹치는 일정도 저장되며, 종료 시각이 없어 검사가 제한되면 경고를 반환한다. PATCH에서 선택 필드에 `null`을 보내면 값을 지운다.
+
+SQLite 파일은 최초 사용 시 `data/kbl-go.sqlite3`에 생성되며 Git에서 제외된다. 같은 파일을 사용하면 서버 재시작 후에도 같은 `session_id`의 조건·권한·직전 추천 요약을 복원한다. 계획과 로그 API에는 사용자 인증이 없으므로 로컬 단일 사용자 환경에서 사용한다.
 
 ## 검증
 
@@ -78,11 +94,11 @@ LLM은 JSON 모드로 의도·변경 필드·Tool 순서·응답 안내 문장�
 
 ## 현재 제약
 
-- `MemorySessions`는 프로세스 메모리의 최대 200개 조건·결과 요약을 저장한다. 재시작·eviction 후 복구되지 않으며 여러 worker 간 공유하지 않는다. 저장 책임은 별도 모듈로 분리했다.
-- 동시 후속 발화의 갱신 충돌 방지를 위해 전체 실행에 세션 저장소 공통 잠금을 사용한다. 서로 다른 사용자도 대기할 수 있어 동시 처리 개선은 남은 항목이다.
+- FastAPI는 만료 또는 자동 삭제가 없는 SQLite 세션 저장소를 사용한다. 직접 생성한 `AgentRunner`는 저장소를 주입하지 않으면 기존 200개 한도의 메모리 저장소를 사용한다.
+- 세션 갱신 충돌 방지를 위해 단일 프로세스에서 전체 실행을 직렬화한다. 여러 worker의 동시 채팅은 지원 범위 밖이다.
 - 단일 날짜 범위는 최대 31일, 명시적 대안 날짜 범위는 최대 3개다. 후보 목록 자체를 앞부분에서 잘라 적합 후보를 버리지 않는다. 넓은 기간은 외부 호출과 지연이 늘어난다.
 - 공식 이름·도로명 주소 대조표는 현재 잠실학생체육관·안양 정관장 아레나·수원 KT 소닉붐 아레나 3곳이다. 그 외 구장이나 이름·주소가 모호한 후보는 `unknown`이고 임의 좌표로 날씨를 조회하지 않는다. 출처는 [검증 기록](docs/VERIFICATION.md)에 있다.
-- 이벤트는 실행별 메모리 발행 및 응답 반환만 구현했다. 구독자 인터페이스는 있으나 별도 Logging Agent·SQLite 이벤트 저장·조회 API는 미구현이다.
+- Logging Agent는 EventBus의 정형 메타데이터를 저장한다. 저장 오류는 해당 이벤트에만 영향을 주며 자동 재시도는 없다. 실행 중 로그를 삭제하면 이후 발행된 이벤트가 다시 기록될 수 있다.
 
 ## 문서 관리
 

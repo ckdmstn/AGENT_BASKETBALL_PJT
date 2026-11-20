@@ -1,5 +1,18 @@
 # 작업 01 검증 기록
 
+## Task 03 — SQLite 계획 CRUD·세션·Logging Agent (2026-11-20)
+
+| 검증 | 결과 |
+| --- | --- |
+| 변경 전 `.\.venv\Scripts\python.exe -m pytest -q` | 116 passed |
+| 구현 후 동일 명령 | **142 passed in 10.18s**. 기존 116개 유지 및 신규 26개 |
+| `.\.venv\Scripts\python.exe -m pip check` | No broken requirements found |
+
+- 임시 SQLite 초기화와 재초기화, 계획 CRUD 상태 코드, 잘못된 시각·필드의 422, 부분 수정 또는 명시적 null, KST 중복·경계 및 동시 생성, 종료 시각 누락 경고를 확인했다.
+- 같은 DB를 여는 새 Runner에서 원조건·추천 요약·검증 권한을 복원했다. 사용자별 세션 격리와 팀·대체 날짜 권한의 철회가 분석 및 계획 단계의 LLM 실패 뒤에도 보존되는지 확인했다.
+- 로그 API의 실행 구분과 이벤트 순서, 저장 실패 또는 구독 해제 이후 추천 성공, 실패 실행 기록, 합성 인증키·대화 원문·원본 예외 비저장, 삭제 후 계획·대화 세션 및 타 세션 로그 보존을 확인했다.
+- FastAPI TestClient로 채팅 연동, `/docs`와 `/openapi.json` 경로 등록을 확인했다. 추적을 비활성화하고 Tool 및 LLM을 모의 실행했다. 실제 LLM이나 KBL·카카오·기상청 API 호출과 다중 worker 환경은 이번 검증에 포함하지 않았다.
+
 ## PR #4 최종 보완 — 권한 검증 최신 결과 (2026-11-19)
 
 실제 LLM/KBL/Kakao/KMA API **재호출 없음**. 아래 이전 통합 결과는 당시 실행 이력이며 이번에는 잘못된 합성 LLM 출력·Tool mock으로 권한 검증을 재현했다.
