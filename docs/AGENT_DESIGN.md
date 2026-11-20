@@ -5,9 +5,9 @@
 ```mermaid
 flowchart TD
   Start([Start]) --> analyze
-  analyze -->|조회 가능| plan
-  analyze -->|인사, 도움말, 날짜 누락, 오류| respond
-  plan --> execute_tools
+  analyze --> plan
+  plan -->|조회할 Tool이 있음| execute_tools
+  plan -->|인사, 도움말, 날짜 누락, 오류| respond
   execute_tools --> evaluate
   evaluate -->|허용 대안과 잔여 횟수| replan
   replan --> plan

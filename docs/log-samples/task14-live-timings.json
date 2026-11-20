@@ -1,0 +1,128 @@
+{
+  "real_greeting": [
+    {
+      "scenario": "greeting",
+      "http_ms": 4406.62,
+      "agent_ms": 4393.31,
+      "outcome": "RUN_COMPLETED",
+      "replans": 0,
+      "recommendations": [],
+      "excluded": 0,
+      "errors": [],
+      "cached": 0,
+      "llm_ms": {
+        "analyze": [
+          2124.02
+        ],
+        "respond": [
+          2173.72
+        ]
+      },
+      "tool_ms": {},
+      "node_ms": {
+        "analyze": [
+          2146.32
+        ],
+        "plan": [
+          5.6
+        ],
+        "respond": [
+          2186.09
+        ]
+      },
+      "logging_ms": 78.58
+    },
+    {
+      "scenario": "greeting",
+      "http_ms": 3881.88,
+      "agent_ms": 3875.86,
+      "outcome": "RUN_COMPLETED",
+      "replans": 0,
+      "recommendations": [],
+      "excluded": 0,
+      "errors": [],
+      "cached": 0,
+      "llm_ms": {
+        "analyze": [
+          1938.24
+        ],
+        "respond": [
+          1831.82
+        ]
+      },
+      "tool_ms": {},
+      "node_ms": {
+        "analyze": [
+          1970.95
+        ],
+        "plan": [
+          10.81
+        ],
+        "respond": [
+          1847.79
+        ]
+      },
+      "logging_ms": 99.47
+    },
+    {
+      "scenario": "greeting",
+      "http_ms": 3800.73,
+      "agent_ms": 3795.62,
+      "outcome": "RUN_COMPLETED",
+      "replans": 0,
+      "recommendations": [],
+      "excluded": 0,
+      "errors": [],
+      "cached": 0,
+      "llm_ms": {
+        "analyze": [
+          1928.71
+        ],
+        "respond": [
+          1779.17
+        ]
+      },
+      "tool_ms": {},
+      "node_ms": {
+        "analyze": [
+          1953.92
+        ],
+        "plan": [
+          4.72
+        ],
+        "respond": [
+          1798.46
+        ]
+      },
+      "logging_ms": 82.23
+    }
+  ],
+  "real_standalone_probes": [
+    {
+      "tool": "search_arena",
+      "ms": 414.93,
+      "ok": true,
+      "http_status": 200,
+      "service_code": null,
+      "error": null
+    },
+    {
+      "tool": "get_weather",
+      "ms": 1296.46,
+      "ok": true,
+      "http_status": 200,
+      "service_code": "00",
+      "error": null,
+      "forecast_at": "2026-11-20T17:00:00+09:00",
+      "issued_at": "2026-11-20T14:00:00+09:00",
+      "temperature_c": 5.0,
+      "precipitation_probability_pct": 0.0,
+      "precipitation_mm": "강수없음",
+      "available": true,
+      "grid": [
+        90,
+        77
+      ]
+    }
+  ]
+}

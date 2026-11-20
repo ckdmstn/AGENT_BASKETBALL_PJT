@@ -1,0 +1,814 @@
+{
+  "mock": [
+    {
+      "scenario": "normal",
+      "http_ms": 247.2,
+      "agent_ms": 224.64,
+      "outcome": "RUN_COMPLETED",
+      "replans": 0,
+      "recommendations": [
+        "one"
+      ],
+      "excluded": 0,
+      "errors": [],
+      "cached": 0,
+      "llm_ms": {
+        "analyze": [
+          0.12
+        ],
+        "plan": [
+          0.02
+        ],
+        "respond": [
+          0.02
+        ]
+      },
+      "tool_ms": {
+        "search_kbl_games": [
+          0.13
+        ],
+        "get_kbl_game_detail": [
+          0.08
+        ],
+        "search_arena": [
+          0.09
+        ],
+        "get_weather": [
+          0.11
+        ]
+      },
+      "node_ms": {
+        "analyze": [
+          16.14
+        ],
+        "plan": [
+          9.97
+        ],
+        "execute_tools": [
+          84.39
+        ],
+        "evaluate": [
+          9.62
+        ],
+        "respond": [
+          24.74
+        ]
+      },
+      "logging_ms": 203.06
+    },
+    {
+      "scenario": "replan",
+      "http_ms": 291.94,
+      "agent_ms": 278.97,
+      "outcome": "RUN_COMPLETED",
+      "replans": 1,
+      "recommendations": [
+        "one"
+      ],
+      "excluded": 0,
+      "errors": [],
+      "cached": 1,
+      "llm_ms": {
+        "analyze": [
+          0.06
+        ],
+        "plan": [
+          0.02,
+          0.02
+        ],
+        "respond": [
+          0.03
+        ]
+      },
+      "tool_ms": {
+        "search_kbl_games": [
+          0.07
+        ],
+        "get_kbl_game_detail": [
+          0.1
+        ],
+        "search_arena": [
+          0.07
+        ]
+      },
+      "node_ms": {
+        "analyze": [
+          20.19
+        ],
+        "plan": [
+          19.23,
+          21.73
+        ],
+        "execute_tools": [
+          27.03,
+          54.66
+        ],
+        "evaluate": [
+          6.72,
+          0.0
+        ],
+        "replan": [
+          16.82
+        ],
+        "respond": [
+          15.53
+        ]
+      },
+      "logging_ms": 261.7
+    },
+    {
+      "scenario": "limit",
+      "http_ms": 467.35,
+      "agent_ms": 452.22,
+      "outcome": "RUN_COMPLETED",
+      "replans": 3,
+      "recommendations": [],
+      "excluded": 0,
+      "errors": [
+        "NO_RESULT"
+      ],
+      "cached": 1,
+      "llm_ms": {
+        "analyze": [
+          0.06
+        ],
+        "plan": [
+          0.01,
+          0.02,
+          0.01,
+          0.02
+        ],
+        "respond": [
+          0.03
+        ]
+      },
+      "tool_ms": {
+        "search_kbl_games": [
+          0.1,
+          0.06,
+          0.08
+        ]
+      },
+      "node_ms": {
+        "analyze": [
+          15.53
+        ],
+        "plan": [
+          18.92,
+          12.53,
+          13.36,
+          15.97
+        ],
+        "execute_tools": [
+          25.93,
+          22.92,
+          30.2,
+          19.64
+        ],
+        "evaluate": [
+          8.82,
+          8.03,
+          17.98,
+          7.08
+        ],
+        "replan": [
+          17.31,
+          10.04,
+          20.38
+        ],
+        "respond": [
+          17.71
+        ]
+      },
+      "logging_ms": 426.34
+    },
+    {
+      "scenario": "tool_failure",
+      "http_ms": 209.97,
+      "agent_ms": 195.82,
+      "outcome": "RUN_COMPLETED",
+      "replans": 0,
+      "recommendations": [],
+      "excluded": 1,
+      "errors": [
+        "MISSING_API_KEY"
+      ],
+      "cached": 0,
+      "llm_ms": {
+        "analyze": [
+          0.06
+        ],
+        "plan": [
+          0.02
+        ],
+        "respond": [
+          0.03
+        ]
+      },
+      "tool_ms": {
+        "search_kbl_games": [
+          0.06
+        ],
+        "get_kbl_game_detail": [
+          0.07
+        ],
+        "search_arena": [
+          0.07
+        ],
+        "get_weather": [
+          0.07
+        ]
+      },
+      "node_ms": {
+        "analyze": [
+          14.97
+        ],
+        "plan": [
+          19.98
+        ],
+        "execute_tools": [
+          75.73
+        ],
+        "evaluate": [
+          7.77
+        ],
+        "respond": [
+          16.87
+        ]
+      },
+      "logging_ms": 184.36
+    },
+    {
+      "scenario": "greeting",
+      "http_ms": 98.43,
+      "agent_ms": 93.0,
+      "outcome": "RUN_COMPLETED",
+      "replans": 0,
+      "recommendations": [],
+      "excluded": 0,
+      "errors": [],
+      "cached": 0,
+      "llm_ms": {
+        "analyze": [
+          0.05
+        ],
+        "respond": [
+          0.03
+        ]
+      },
+      "tool_ms": {},
+      "node_ms": {
+        "analyze": [
+          13.98
+        ],
+        "plan": [
+          5.65
+        ],
+        "respond": [
+          18.75
+        ]
+      },
+      "logging_ms": 86.54
+    },
+    {
+      "scenario": "normal",
+      "http_ms": 217.33,
+      "agent_ms": 203.69,
+      "outcome": "RUN_COMPLETED",
+      "replans": 0,
+      "recommendations": [
+        "one"
+      ],
+      "excluded": 0,
+      "errors": [],
+      "cached": 0,
+      "llm_ms": {
+        "analyze": [
+          0.09
+        ],
+        "plan": [
+          0.02
+        ],
+        "respond": [
+          0.04
+        ]
+      },
+      "tool_ms": {
+        "search_kbl_games": [
+          0.07
+        ],
+        "get_kbl_game_detail": [
+          0.11
+        ],
+        "search_arena": [
+          0.12
+        ],
+        "get_weather": [
+          0.1
+        ]
+      },
+      "node_ms": {
+        "analyze": [
+          15.92
+        ],
+        "plan": [
+          20.01
+        ],
+        "execute_tools": [
+          79.15
+        ],
+        "evaluate": [
+          7.75
+        ],
+        "respond": [
+          14.79
+        ]
+      },
+      "logging_ms": 191.71
+    },
+    {
+      "scenario": "replan",
+      "http_ms": 289.97,
+      "agent_ms": 277.82,
+      "outcome": "RUN_COMPLETED",
+      "replans": 1,
+      "recommendations": [
+        "one"
+      ],
+      "excluded": 0,
+      "errors": [],
+      "cached": 1,
+      "llm_ms": {
+        "analyze": [
+          0.05
+        ],
+        "plan": [
+          0.02,
+          0.01
+        ],
+        "respond": [
+          0.02
+        ]
+      },
+      "tool_ms": {
+        "search_kbl_games": [
+          0.07
+        ],
+        "get_kbl_game_detail": [
+          0.13
+        ],
+        "search_arena": [
+          0.07
+        ]
+      },
+      "node_ms": {
+        "analyze": [
+          16.68
+        ],
+        "plan": [
+          19.05,
+          16.09
+        ],
+        "execute_tools": [
+          25.78,
+          48.31
+        ],
+        "evaluate": [
+          9.05,
+          4.59
+        ],
+        "replan": [
+          21.07
+        ],
+        "respond": [
+          17.03
+        ]
+      },
+      "logging_ms": 261.2
+    },
+    {
+      "scenario": "limit",
+      "http_ms": 438.17,
+      "agent_ms": 425.77,
+      "outcome": "RUN_COMPLETED",
+      "replans": 3,
+      "recommendations": [],
+      "excluded": 0,
+      "errors": [
+        "NO_RESULT"
+      ],
+      "cached": 1,
+      "llm_ms": {
+        "analyze": [
+          0.07
+        ],
+        "plan": [
+          0.01,
+          0.01,
+          0.01,
+          0.01
+        ],
+        "respond": [
+          0.03
+        ]
+      },
+      "tool_ms": {
+        "search_kbl_games": [
+          0.07,
+          0.06,
+          0.07
+        ]
+      },
+      "node_ms": {
+        "analyze": [
+          18.16
+        ],
+        "plan": [
+          21.5,
+          16.31,
+          14.59,
+          13.75
+        ],
+        "execute_tools": [
+          22.93,
+          10.41,
+          32.87,
+          27.41
+        ],
+        "evaluate": [
+          5.64,
+          12.86,
+          9.87,
+          7.02
+        ],
+        "replan": [
+          19.92,
+          8.76,
+          11.17
+        ],
+        "respond": [
+          14.36
+        ]
+      },
+      "logging_ms": 402.7
+    },
+    {
+      "scenario": "tool_failure",
+      "http_ms": 203.06,
+      "agent_ms": 191.18,
+      "outcome": "RUN_COMPLETED",
+      "replans": 0,
+      "recommendations": [],
+      "excluded": 1,
+      "errors": [
+        "MISSING_API_KEY"
+      ],
+      "cached": 0,
+      "llm_ms": {
+        "analyze": [
+          0.06
+        ],
+        "plan": [
+          0.02
+        ],
+        "respond": [
+          0.02
+        ]
+      },
+      "tool_ms": {
+        "search_kbl_games": [
+          0.11
+        ],
+        "get_kbl_game_detail": [
+          0.07
+        ],
+        "search_arena": [
+          0.06
+        ],
+        "get_weather": [
+          0.07
+        ]
+      },
+      "node_ms": {
+        "analyze": [
+          15.69
+        ],
+        "plan": [
+          12.91
+        ],
+        "execute_tools": [
+          79.13
+        ],
+        "evaluate": [
+          2.08
+        ],
+        "respond": [
+          13.55
+        ]
+      },
+      "logging_ms": 181.31
+    },
+    {
+      "scenario": "greeting",
+      "http_ms": 83.78,
+      "agent_ms": 79.4,
+      "outcome": "RUN_COMPLETED",
+      "replans": 0,
+      "recommendations": [],
+      "excluded": 0,
+      "errors": [],
+      "cached": 0,
+      "llm_ms": {
+        "analyze": [
+          0.05
+        ],
+        "respond": [
+          0.02
+        ]
+      },
+      "tool_ms": {},
+      "node_ms": {
+        "analyze": [
+          15.5
+        ],
+        "plan": [
+          2.22
+        ],
+        "respond": [
+          12.33
+        ]
+      },
+      "logging_ms": 74.0
+    },
+    {
+      "scenario": "normal",
+      "http_ms": 203.57,
+      "agent_ms": 190.44,
+      "outcome": "RUN_COMPLETED",
+      "replans": 0,
+      "recommendations": [
+        "one"
+      ],
+      "excluded": 0,
+      "errors": [],
+      "cached": 0,
+      "llm_ms": {
+        "analyze": [
+          0.05
+        ],
+        "plan": [
+          0.02
+        ],
+        "respond": [
+          0.02
+        ]
+      },
+      "tool_ms": {
+        "search_kbl_games": [
+          0.06
+        ],
+        "get_kbl_game_detail": [
+          0.07
+        ],
+        "search_arena": [
+          0.15
+        ],
+        "get_weather": [
+          0.07
+        ]
+      },
+      "node_ms": {
+        "analyze": [
+          14.81
+        ],
+        "plan": [
+          14.29
+        ],
+        "execute_tools": [
+          72.19
+        ],
+        "evaluate": [
+          16.68
+        ],
+        "respond": [
+          19.96
+        ]
+      },
+      "logging_ms": 180.23
+    },
+    {
+      "scenario": "replan",
+      "http_ms": 274.16,
+      "agent_ms": 260.73,
+      "outcome": "RUN_COMPLETED",
+      "replans": 1,
+      "recommendations": [
+        "one"
+      ],
+      "excluded": 0,
+      "errors": [],
+      "cached": 1,
+      "llm_ms": {
+        "analyze": [
+          0.05
+        ],
+        "plan": [
+          0.01,
+          0.03
+        ],
+        "respond": [
+          0.03
+        ]
+      },
+      "tool_ms": {
+        "search_kbl_games": [
+          0.09
+        ],
+        "get_kbl_game_detail": [
+          0.1
+        ],
+        "search_arena": [
+          0.07
+        ]
+      },
+      "node_ms": {
+        "analyze": [
+          16.3
+        ],
+        "plan": [
+          10.36,
+          10.17
+        ],
+        "execute_tools": [
+          15.72,
+          48.9
+        ],
+        "evaluate": [
+          8.6,
+          11.75
+        ],
+        "replan": [
+          17.06
+        ],
+        "respond": [
+          9.88
+        ]
+      },
+      "logging_ms": 245.14
+    },
+    {
+      "scenario": "limit",
+      "http_ms": 482.27,
+      "agent_ms": 462.1,
+      "outcome": "RUN_COMPLETED",
+      "replans": 3,
+      "recommendations": [],
+      "excluded": 0,
+      "errors": [
+        "NO_RESULT"
+      ],
+      "cached": 1,
+      "llm_ms": {
+        "analyze": [
+          0.06
+        ],
+        "plan": [
+          0.02,
+          0.01,
+          0.01,
+          0.02
+        ],
+        "respond": [
+          0.04
+        ]
+      },
+      "tool_ms": {
+        "search_kbl_games": [
+          0.09,
+          0.09,
+          0.1
+        ]
+      },
+      "node_ms": {
+        "analyze": [
+          15.43
+        ],
+        "plan": [
+          19.9,
+          20.09,
+          20.21,
+          15.78
+        ],
+        "execute_tools": [
+          19.85,
+          14.32,
+          27.09,
+          26.98
+        ],
+        "evaluate": [
+          8.71,
+          11.05,
+          0.75,
+          8.51
+        ],
+        "replan": [
+          12.1,
+          7.09,
+          19.39
+        ],
+        "respond": [
+          21.77
+        ]
+      },
+      "logging_ms": 434.88
+    },
+    {
+      "scenario": "tool_failure",
+      "http_ms": 245.53,
+      "agent_ms": 228.23,
+      "outcome": "RUN_COMPLETED",
+      "replans": 0,
+      "recommendations": [],
+      "excluded": 1,
+      "errors": [
+        "MISSING_API_KEY"
+      ],
+      "cached": 0,
+      "llm_ms": {
+        "analyze": [
+          0.08
+        ],
+        "plan": [
+          0.02
+        ],
+        "respond": [
+          0.03
+        ]
+      },
+      "tool_ms": {
+        "search_kbl_games": [
+          0.09
+        ],
+        "get_kbl_game_detail": [
+          0.11
+        ],
+        "search_arena": [
+          0.11
+        ],
+        "get_weather": [
+          0.1
+        ]
+      },
+      "node_ms": {
+        "analyze": [
+          19.99
+        ],
+        "plan": [
+          22.89
+        ],
+        "execute_tools": [
+          82.84
+        ],
+        "evaluate": [
+          11.57
+        ],
+        "respond": [
+          16.85
+        ]
+      },
+      "logging_ms": 214.01
+    },
+    {
+      "scenario": "greeting",
+      "http_ms": 98.37,
+      "agent_ms": 93.2,
+      "outcome": "RUN_COMPLETED",
+      "replans": 0,
+      "recommendations": [],
+      "excluded": 0,
+      "errors": [],
+      "cached": 0,
+      "llm_ms": {
+        "analyze": [
+          0.05
+        ],
+        "respond": [
+          0.03
+        ]
+      },
+      "tool_ms": {},
+      "node_ms": {
+        "analyze": [
+          20.4
+        ],
+        "plan": [
+          12.79
+        ],
+        "respond": [
+          17.7
+        ]
+      },
+      "logging_ms": 85.63
+    }
+  ]
+}
