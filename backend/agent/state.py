@@ -94,6 +94,7 @@ class ChatResponse(StrictModel):
     run_id: str
     conditions: Conditions
     active_conditions: Conditions
+    team_permission: Literal['allowed', 'denied', 'confirmation_required'] = 'denied'
     answer: str
     recommendations: list[Assessment]
     excluded: list[Assessment]

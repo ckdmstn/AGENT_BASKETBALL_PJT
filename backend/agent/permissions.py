@@ -17,6 +17,7 @@ DATE_DENY = re.compile(r'(?:다른날짜|대체날짜|대안날짜|날짜변경)
 UNCERTAIN = re.compile(r'예시|예를|인용|라고|말했|말한|가정|아마|글쎄|모르|어떨|괜찮을|않|아니|아님|아냐|취소|철회|금지|제외')
 DATE_ALLOW = re.compile(r'대체날짜(?::|는|로)(.+?)(?:을|를)?(?:허용해|허용해줘|허용합니다|괜찮아)')
 ISO_RANGE = re.compile(r'(\d{4}-\d{2}-\d{2})(?:~(\d{4}-\d{2}-\d{2}))?')
+TEAM_CONFIRMATION_WARNING = '다른 팀 허용 여부를 확인해 주세요. 명확한 허용 전에는 팀 조건을 완화하지 않습니다.'
 
 
 def verify_permissions(message: str, previous: dict, *, follow_up: bool) -> tuple[dict, list[str]]:
@@ -37,7 +38,7 @@ def verify_permissions(message: str, previous: dict, *, follow_up: bool) -> tupl
         permission['team'] = True
     elif '다른팀' in compact or '타팀' in compact:
         permission['team'] = False
-        warnings.append('다른 팀 허용 여부를 확인해 주세요. 명확한 허용 전에는 팀 조건을 완화하지 않습니다.')
+        warnings.append(TEAM_CONFIRMATION_WARNING)
 
     if DATE_DENY.search(compact):
         permission['date_ranges'] = []

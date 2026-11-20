@@ -75,6 +75,10 @@ class Nodes:
     def analyze(self, state):
         result = self.ask('analyze', {'message': state['user_message'], 'current_date': datetime.now(KST).date().isoformat(),
                                      'last_conditions': state['last_conditions'], 'last_summary': state['last_summary']}, Analysis)
+        standalone = ' '.join(state['user_message'].split()).rstrip('.。')
+        if state['last_conditions'] and standalone in ('다른 팀도 괜찮아', '다른 팀은 안 돼'):
+            # A permission-only command must preserve the existing recommendation filters.
+            result = Analysis(intent='follow_up')
         state['intent'] = result.intent
         if result.intent == 'follow_up' and not state['last_conditions']:
             state['warnings'].append('이 세션의 이전 조건이 없습니다. 날짜와 조건을 다시 알려 주세요.')

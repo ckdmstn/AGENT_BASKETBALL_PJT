@@ -41,6 +41,18 @@
         </form>
         <p id="chat-status" role="status" class="notice" hidden></p>
         <button type="button" id="retry-chat" hidden>다시 보내기</button>
+        <section class="permission-panel" aria-labelledby="permission-title">
+          <div class="section-head">
+            <h3 id="permission-title">다른 팀 추천</h3>
+            <span id="team-permission" class="status" role="status">상태 미확인</span>
+          </div>
+          <p id="team-permission-help" class="muted">아직 서버의 권한 상태를 확인하지 못했습니다.</p>
+          <p id="team-relaxation" class="run-relaxation" hidden></p>
+          <div class="permission-actions">
+            <button type="button" id="allow-team">다른 팀도 허용</button>
+            <button type="button" id="revoke-team">허용 취소</button>
+          </div>
+        </section>
       </section>
       <section id="recommendations" class="panel" aria-labelledby="results-title">
         <div class="section-head"><h2 id="results-title">추천 경기</h2><span id="result-count" class="count"></span></div>

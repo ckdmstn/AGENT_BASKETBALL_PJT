@@ -82,6 +82,7 @@ textarea { resize: vertical; }
 .danger { color: var(--error-text); }
 .notice { padding: .7rem .85rem; background: var(--soft); border-left: .25rem solid var(--primary); border-radius: .35rem; overflow-wrap: anywhere; }
 .notice.error { background: var(--error-bg); border-color: var(--error-border); }
+.notice.success { background: var(--success-bg); border-color: var(--success-border); }
 .notice.warning { background: var(--warning-bg); border-color: var(--warning-border); }
 .count, .status { border: 1px solid var(--border); padding: .18rem .55rem; border-radius: 1rem; color: var(--muted-strong); font-size: .88rem; }
 .count:empty { display: none; }
@@ -99,6 +100,10 @@ summary { cursor: pointer; font-weight: 700; }
 .condition-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
 .condition-grid > div { background: var(--soft); border-radius: .6rem; padding: .7rem; margin-top: .65rem; }
 .replan-step { border-left: .2rem solid var(--warning-border); padding: .55rem .7rem; margin-top: .7rem; background: var(--warning-bg); }
+.permission-panel { margin-top: 1rem; padding: .9rem; border: 1px solid var(--border); border-radius: .65rem; background: var(--background); }
+.permission-panel p { margin: .55rem 0; }
+.permission-actions { display: flex; flex-wrap: wrap; gap: .55rem; }
+.run-relaxation { color: var(--warning-text); font-weight: 700; }
 dialog { width: min(32rem, calc(100% - 2rem)); padding: 1.25rem; border-radius: .85rem; border: 1px solid var(--border); background: var(--surface); color: inherit; }
 dialog::backdrop { background: var(--backdrop); }
 .actions { justify-content: flex-end; margin-top: 1rem; }
