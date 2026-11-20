@@ -187,6 +187,7 @@ function button(text, action) {
 const errors = {
   400: "요청을 확인해 주세요.",
   404: "항목을 찾을 수 없습니다. 목록을 새로고침해 주세요.",
+  409: "이미 저장한 경기입니다. 저장한 계획에서 확인하거나 수정해 주세요.",
   422: "입력한 내용이나 시각을 확인해 주세요.",
   500: "서버에서 요청을 처리하지 못했습니다.",
   503: "저장소를 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.",
@@ -413,6 +414,7 @@ function openPlan(plan) {
   if (plan.id) summary.append(element("small", "저장 " + dateLabel(plan.created_at) + " · 수정 " + dateLabel(plan.updated_at)));
   planNote.value = plan.note ?? "";
   byId("delete-plan").hidden = !plan.id;
+  notice("plan-notice", "");
   notice("plan-error", "");
   planDialog.showModal();
 }
@@ -435,7 +437,8 @@ async function loadPlans() {
       const entry = element("article", null, "entry");
       entry.append(element("h3", matchTitle(plan)), element("p", dateLabel(plan.start_at) + " · " + plan.venue_name));
       if (plan.note) entry.append(element("p", plan.note, "muted"));
-      entry.append(button("계획 상세", async (trigger) => {
+      const detail = button("계획 상세", async (trigger) => {
+        if (planBusy) return;
         trigger.disabled = true;
         notice("plan-notice", "");
         try {
@@ -445,7 +448,13 @@ async function loadPlans() {
         } finally {
           trigger.disabled = false;
         }
-      }));
+      });
+      const remove = button("삭제", (trigger) => deletePlan(plan, trigger));
+      remove.classList.add("danger");
+      remove.setAttribute("aria-label", matchTitle(plan) + " 계획 삭제");
+      const actions = element("div", null, "plan-actions");
+      actions.append(detail, remove);
+      entry.append(actions);
       list.append(entry);
     }
   } catch (error) {
@@ -495,19 +504,27 @@ planForm.addEventListener("submit", async (event) => {
   }
 });
 
-byId("delete-plan").addEventListener("click", async () => {
-  if (planBusy || !selectedPlan?.id || !confirm("이 직관 계획을 삭제할까요?")) return;
+async function deletePlan(plan, trigger, inDialog = false) {
+  if (planBusy || !plan?.id || !window.confirm(matchTitle(plan) + " 계획을 삭제할까요?")) return;
   setPlanBusy(true);
+  trigger.disabled = true;
+  const messageId = inDialog ? "plan-error" : "plan-notice";
+  notice(messageId, "");
   try {
-    await api("/api/plans/" + selectedPlan.id, "DELETE");
-    planDialog.close();
-    notice("plan-notice", "계획을 삭제했습니다.");
+    await api("/api/plans/" + plan.id, "DELETE");
+    if (inDialog) planDialog.close();
+    notice("plan-notice", "계획을 삭제했습니다.", "success");
     await loadPlans();
   } catch (error) {
-    notice("plan-error", error.message, "error");
+    notice(messageId, error.message, "error");
   } finally {
     setPlanBusy(false);
+    trigger.disabled = false;
   }
+}
+
+byId("delete-plan").addEventListener("click", (event) => {
+  deletePlan(selectedPlan, event.currentTarget, true);
 });
 loadPlans();
 
