@@ -3,14 +3,15 @@ from sqlite3 import Error as SQLiteError
 
 from fastapi import Depends, FastAPI
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from backend.agent.graph import AgentRunner
 from backend.agent.logging import LoggingAgent
 from backend.agent.sessions import SQLiteSessions
 from backend.agent.state import ChatRequest, ChatResponse
-from backend.config import load_settings
+from backend.config import ROOT, load_settings
 from backend.database import Database, get_database
 from backend.logs import router as logs_router
 from backend.plans import router as plans_router
@@ -18,6 +19,13 @@ from backend.plans import router as plans_router
 app = FastAPI(title='KBL GO', version='0.2.0', description='LangGraph KBL 직관 추천 Agent')
 app.include_router(plans_router)
 app.include_router(logs_router)
+frontend = ROOT / 'frontend'
+app.mount('/static', StaticFiles(directory=frontend), name='static')
+
+
+@app.get('/', include_in_schema=False)
+def web_ui() -> FileResponse:
+    return FileResponse(frontend / 'index.html')
 
 
 @lru_cache
