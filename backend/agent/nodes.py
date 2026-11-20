@@ -73,12 +73,14 @@ class Nodes:
         return clean
 
     def analyze(self, state):
-        result = self.ask('analyze', {'message': state['user_message'], 'current_date': datetime.now(KST).date().isoformat(),
-                                     'last_conditions': state['last_conditions'], 'last_summary': state['last_summary']}, Analysis)
-        standalone = ' '.join(state['user_message'].split()).rstrip('.。')
-        if state['last_conditions'] and standalone in ('다른 팀도 괜찮아', '다른 팀은 안 돼'):
-            # A permission-only command must preserve the existing recommendation filters.
+        message = ' '.join(state['user_message'].split())
+        permission_only = message.rstrip('.。') in ('다른 팀도 괜찮아', '다른 팀은 안 돼') and (
+            bool(state['last_conditions']) or message in ('다른 팀도 괜찮아.', '다른 팀은 안 돼.'))
+        if permission_only:
             result = Analysis(intent='follow_up')
+        else:
+            result = self.ask('analyze', {'message': state['user_message'], 'current_date': datetime.now(KST).date().isoformat(),
+                                         'last_conditions': state['last_conditions'], 'last_summary': state['last_summary']}, Analysis)
         state['intent'] = result.intent
         if result.intent == 'follow_up' and not state['last_conditions']:
             state['warnings'].append('이 세션의 이전 조건이 없습니다. 날짜와 조건을 다시 알려 주세요.')
@@ -86,8 +88,8 @@ class Nodes:
         patch = result.conditions.model_dump(mode='json')
         merged = {**previous, **{k: patch[k] for k in result.changed_fields}}
         permission, warnings = verify_permissions(state['user_message'], state['last_permissions'], follow_up=result.intent == 'follow_up')
-        if (merged.get('fallback_teams_allowed', False) != permission['team'] or
-                merged.get('alternative_date_ranges', []) != permission['date_ranges']):
+        if not permission_only and (merged.get('fallback_teams_allowed', False) != permission['team'] or
+                                    merged.get('alternative_date_ranges', []) != permission['date_ranges']):
             warnings.append('조건 완화 권한은 LLM 플래그가 아닌 검증된 명시적 허용을 기준으로 적용했습니다. 불명확한 허용은 확인이 필요합니다.')
         merged['fallback_teams_allowed'] = permission['team']
         merged['alternative_date_ranges'] = permission['date_ranges']
@@ -96,9 +98,10 @@ class Nodes:
         c = Conditions.model_validate(merged)
         state['conditions'] = c.model_dump(mode='json')
         state['active_conditions'] = deepcopy(state['conditions'])
-        state['bus'].publish('LLM_DECISION', node_name='analyze',
-                             payload={'intent': result.intent, 'changed_fields': result.changed_fields,
-                                      'reason': self.decision_reason(result.reason, state, '요청 의도와 명시적으로 변경한 조건을 추출함')})
+        if not permission_only:
+            state['bus'].publish('LLM_DECISION', node_name='analyze',
+                                 payload={'intent': result.intent, 'changed_fields': result.changed_fields,
+                                          'reason': self.decision_reason(result.reason, state, '요청 의도와 명시적으로 변경한 조건을 추출함')})
 
     def plan(self, state):
         c = Conditions.model_validate(state['active_conditions'])

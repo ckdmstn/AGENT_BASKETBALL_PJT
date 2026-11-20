@@ -37,11 +37,20 @@ def test_withdrawal_wins_even_when_llm_omits_or_misreads_it():
     assert not r.conditions.fallback_teams_allowed and r.replan_count==0
 
 
-def test_permission_only_turns_preserve_filters_if_model_misclassifies():
-    agent = runner([analysis(preferred_team='LG', region='서울'), {'intent': 'greeting'}, {'intent': 'help'}])
+def test_permission_only_turns_skip_analysis_and_preserve_filters():
+    from backend.agent.graph import AgentRunner
+    from backend.agent.llm import LLMError
+    from backend.config import Settings
+    from tests.test_agent import FakeLLM
+
+    llm = FakeLLM([analysis(preferred_team='LG', region='서울', start_after='18:00',
+                           max_precipitation_probability_pct=30), LLMError('LLM_UPSTREAM_ERROR')])
+    agent = AgentRunner(llm=llm, tool_invoker=FakeTools(), settings=Settings())
     original = agent.run('서울에서 LG 경기 추천', 'button-session')
     granted = agent.run('다른 팀도 괜찮아.', 'button-session')
     revoked = agent.run('다른 팀은 안 돼.', 'button-session')
+    assert llm.stages.count('analyze') == 1
+    assert not granted.errors and not revoked.errors
     assert original.team_permission == 'denied'
     assert granted.team_permission == 'allowed'
     assert granted.conditions.preferred_team == 'LG'
@@ -49,6 +58,22 @@ def test_permission_only_turns_preserve_filters_if_model_misclassifies():
     assert granted.conditions.date_range == original.conditions.date_range
     assert revoked.conditions == original.conditions
     assert revoked.team_permission == 'denied' and revoked.replan_count == 0
+    assert not agent.sessions.load('button-session')['permissions']['team']
+    ordinary = agent.run('조건을 다시 확인해 줘', 'button-session')
+    assert llm.stages.count('analyze') == 2 and ordinary.errors[0].code == 'LLM_UPSTREAM_ERROR'
+    assert ordinary.team_permission == 'denied'
+
+
+@pytest.mark.parametrize('command, expected', [
+    ('다른 팀도 괜찮아.', 'allowed'),
+    ('다른 팀은 안 돼.', 'denied'),
+])
+def test_first_button_command_asks_for_date_without_analysis_or_tools(command, expected):
+    response = runner([]).run(command)
+    assert response.team_permission == expected
+    assert response.conditions.date_range is None
+    assert not response.errors and '어느 날짜' in response.answer
+    assert not any(event['event_type'] == 'TOOL_REQUESTED' for event in response.events)
 
 
 def test_ambiguous_message_returns_confirmation_required_without_permission():
@@ -141,7 +166,7 @@ def test_verified_withdrawal_persists_even_when_llm_processing_fails(failed_stag
     assert a.run(grant,'failed-withdrawal').replan_count==1
     llm.fail_stage=failed_stage
     failed=a.run('다른 팀은 안 돼' if kind=='team' else '다른 날짜는 안 돼','failed-withdrawal')
-    assert failed.errors
+    assert bool(failed.errors) is (kind != 'team' or failed_stage != 'analyze')
     llm.fail_stage=None
     final=a.run('다시 찾아 줘','failed-withdrawal')
     assert final.replan_count==0

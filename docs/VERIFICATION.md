@@ -1,5 +1,12 @@
 # 작업 01 검증 기록
 
+## PR #12 리뷰 보완 — 권한 전용 명령 (2026-11-20 KST)
+
+- 기존 세션의 독립 허용·철회 문장과 첫 대화의 정확한 버튼 문장을 Analyze LLM 호출 전에 분류한다. 권한 판정은 기존 `verify_permissions()`가 수행한다. 기존 조건, 철회 선반영·세션 저장, 일반 자연어 분석은 유지한다. Analyze LLM을 호출하지 않은 턴은 분석 단계의 시작·완료 이벤트만 남긴다.
+- 첫 대화의 버튼 명령은 권한을 처리한 뒤 날짜를 안내하며 경기 조회를 실행하지 않는다. 날짜가 있는 권한 전용 요청의 계획·응답 단계는 기존과 같이 LLM을 사용할 수 있다.
+- Analyze 실패가 설정된 모의 모델에서 권한 명령은 분석을 건너뛰고 일반 후속 발화는 기존 분석을 실행했다. 새 버튼 문장 2건, 철회 뒤 재계획 차단, 모호한 허용 차단을 검증했다.
+- `.\.venv\Scripts\python.exe -m pytest -q` **151 passed in 6.82s**, `pip check`·JavaScript 구문·Git 공백 검사 통과. Chromium의 권한 버튼과 기존 전체 스모크도 통과했다. 브라우저에는 임시 SQLite와 Mock LLM·Tool을 사용했으며 실제 외부 API·LLM은 재호출하지 않았다.
+
 ## Task 06 — 딥 네이비 및 팀 완화 권한 (2026-11-20 KST)
 
 - PR #10 병합을 포함한 `main`의 `ea32c1e`에서 시작했다. 변경 전 pytest 147개, 변경 후 `.\.venv\Scripts\python.exe -m pytest -q` **149 passed in 4.71s**. 기존 SQLite 철회 테스트에도 응답 상태 확인을 추가했다. `pip check`, `node --check frontend/app.js`, Git 공백 검사 통과.
