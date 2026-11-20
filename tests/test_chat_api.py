@@ -40,3 +40,29 @@ def test_chat_schema_registered(client):
     spec=client.get('/openapi.json').json()
     assert '/api/chat' in spec['paths']
     assert 'ChatResponse' in spec['components']['schemas']
+
+
+@pytest.mark.parametrize('choice', ['true', 1, 0, [], {}])
+def test_chat_rejects_non_boolean_team_choice(client, choice):
+    response = client.post('/api/chat', json={'message': '경기 추천', 'allow_other_teams': choice})
+    assert response.status_code == 422
+    assert response.json() == {'detail': '요청 형식을 확인해 주세요.'}
+
+
+def test_chat_team_checkbox_has_priority_and_preserves_response(client):
+    first = client.post('/api/chat', json={'message': 'LG만 추천해줘', 'allow_other_teams': True})
+    assert first.status_code == 200 and first.json()['team_permission'] == 'allowed'
+    assert any('체크박스' in item for item in first.json()['warnings'])
+    second = client.post('/api/chat', json={
+        'session_id': first.json()['session_id'], 'message': '다른 팀도 괜찮아.', 'allow_other_teams': False,
+    })
+    assert second.status_code == 200 and second.json()['team_permission'] == 'denied'
+    assert not second.json()['conditions']['fallback_teams_allowed']
+    assert second.json()['replan_count'] == 0
+    assert any('체크박스' in item for item in second.json()['warnings'])
+
+
+@pytest.mark.parametrize('choice', [{}, {'allow_other_teams': None}])
+def test_chat_null_and_omitted_preserve_legacy_grammar(client, choice):
+    response = client.post('/api/chat', json={'message': '다른 팀도 괜찮아.', **choice})
+    assert response.status_code == 200 and response.json()['team_permission'] == 'allowed'
