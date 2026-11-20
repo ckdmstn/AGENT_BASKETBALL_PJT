@@ -1,0 +1,299 @@
+{
+  "environment": "Mock LLM and external Tools with real LangGraph and SQLite logging",
+  "request": "서울 오후 2시 이후 강수확률 30% 이하 경기",
+  "elapsed_ms": 461.48,
+  "answer": "조건 검증 결과를 안내합니다.\n2026-11-19T19:00:00+09:00: 서울 삼성 vs 서울 SK / 잠실학생체육관\n추천 근거: 경기 시작=2026-11-19T19:00:00+09:00; 요청 범위=2026-11-19~2026-11-19; 요청 시작 하한=14:00:00; 실제 시작=2026-11-19T19:00:00+09:00; 요청 지역=서울; 확인 주소=서울 송파구 올림픽로 25; 강수확률=20.0; 상한=30.0",
+  "recommendations": 1,
+  "excluded": 0,
+  "replan_count": 0,
+  "errors": [],
+  "events": [
+    {
+      "session_id": "mock-normal",
+      "run_id": "bd7e935b-3b86-4ed7-9d93-5549ef16f99d",
+      "sequence_no": 1,
+      "timestamp": "2026-11-20T16:09:59.748436+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "analyze",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-normal",
+      "run_id": "bd7e935b-3b86-4ed7-9d93-5549ef16f99d",
+      "sequence_no": 2,
+      "timestamp": "2026-11-20T16:09:59.764646+09:00",
+      "event_type": "LLM_DECISION",
+      "node_name": "analyze",
+      "tool_name": null,
+      "payload": {
+        "intent": "plan",
+        "changed_fields": [
+          "date_range",
+          "region",
+          "start_after",
+          "max_precipitation_probability_pct"
+        ],
+        "reason": "요청 의도와 명시적으로 변경한 조건을 추출함"
+      }
+    },
+    {
+      "session_id": "mock-normal",
+      "run_id": "bd7e935b-3b86-4ed7-9d93-5549ef16f99d",
+      "sequence_no": 3,
+      "timestamp": "2026-11-20T16:09:59.783792+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "analyze",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-normal",
+      "run_id": "bd7e935b-3b86-4ed7-9d93-5549ef16f99d",
+      "sequence_no": 4,
+      "timestamp": "2026-11-20T16:09:59.801969+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "plan",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-normal",
+      "run_id": "bd7e935b-3b86-4ed7-9d93-5549ef16f99d",
+      "sequence_no": 5,
+      "timestamp": "2026-11-20T16:09:59.824996+09:00",
+      "event_type": "LLM_DECISION",
+      "node_name": "plan",
+      "tool_name": null,
+      "payload": {
+        "tools": [
+          "search_kbl_games",
+          "get_kbl_game_detail",
+          "search_arena",
+          "get_weather"
+        ],
+        "reason": "필요한 정보만 조회"
+      }
+    },
+    {
+      "session_id": "mock-normal",
+      "run_id": "bd7e935b-3b86-4ed7-9d93-5549ef16f99d",
+      "sequence_no": 6,
+      "timestamp": "2026-11-20T16:09:59.848913+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "plan",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-normal",
+      "run_id": "bd7e935b-3b86-4ed7-9d93-5549ef16f99d",
+      "sequence_no": 7,
+      "timestamp": "2026-11-20T16:09:59.876369+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "execute_tools",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-normal",
+      "run_id": "bd7e935b-3b86-4ed7-9d93-5549ef16f99d",
+      "sequence_no": 8,
+      "timestamp": "2026-11-20T16:09:59.896149+09:00",
+      "event_type": "TOOL_REQUESTED",
+      "node_name": "execute_tools",
+      "tool_name": "search_kbl_games",
+      "payload": {
+        "arguments": {
+          "from_date": "2026-11-19",
+          "to_date": "2026-11-19"
+        }
+      }
+    },
+    {
+      "session_id": "mock-normal",
+      "run_id": "bd7e935b-3b86-4ed7-9d93-5549ef16f99d",
+      "sequence_no": 9,
+      "timestamp": "2026-11-20T16:09:59.920314+09:00",
+      "event_type": "TOOL_RESPONDED",
+      "node_name": "execute_tools",
+      "tool_name": "search_kbl_games",
+      "payload": {
+        "cached": false,
+        "ok": true,
+        "error_code": null
+      }
+    },
+    {
+      "session_id": "mock-normal",
+      "run_id": "bd7e935b-3b86-4ed7-9d93-5549ef16f99d",
+      "sequence_no": 10,
+      "timestamp": "2026-11-20T16:09:59.937442+09:00",
+      "event_type": "TOOL_REQUESTED",
+      "node_name": "execute_tools",
+      "tool_name": "get_kbl_game_detail",
+      "payload": {
+        "arguments": {
+          "match_id": "one"
+        }
+      }
+    },
+    {
+      "session_id": "mock-normal",
+      "run_id": "bd7e935b-3b86-4ed7-9d93-5549ef16f99d",
+      "sequence_no": 11,
+      "timestamp": "2026-11-20T16:09:59.965300+09:00",
+      "event_type": "TOOL_RESPONDED",
+      "node_name": "execute_tools",
+      "tool_name": "get_kbl_game_detail",
+      "payload": {
+        "cached": false,
+        "ok": true,
+        "error_code": null
+      }
+    },
+    {
+      "session_id": "mock-normal",
+      "run_id": "bd7e935b-3b86-4ed7-9d93-5549ef16f99d",
+      "sequence_no": 12,
+      "timestamp": "2026-11-20T16:09:59.981917+09:00",
+      "event_type": "TOOL_REQUESTED",
+      "node_name": "execute_tools",
+      "tool_name": "search_arena",
+      "payload": {
+        "arguments": {
+          "venue_name": "잠실학생체육관"
+        }
+      }
+    },
+    {
+      "session_id": "mock-normal",
+      "run_id": "bd7e935b-3b86-4ed7-9d93-5549ef16f99d",
+      "sequence_no": 13,
+      "timestamp": "2026-11-20T16:10:00.000050+09:00",
+      "event_type": "TOOL_RESPONDED",
+      "node_name": "execute_tools",
+      "tool_name": "search_arena",
+      "payload": {
+        "cached": false,
+        "ok": true,
+        "error_code": null
+      }
+    },
+    {
+      "session_id": "mock-normal",
+      "run_id": "bd7e935b-3b86-4ed7-9d93-5549ef16f99d",
+      "sequence_no": 14,
+      "timestamp": "2026-11-20T16:10:00.018932+09:00",
+      "event_type": "TOOL_REQUESTED",
+      "node_name": "execute_tools",
+      "tool_name": "get_weather",
+      "payload": {
+        "arguments": {
+          "date_time": "2026-11-19T19:00:00+09:00",
+          "lat": 37.5122,
+          "lon": 127.0754
+        }
+      }
+    },
+    {
+      "session_id": "mock-normal",
+      "run_id": "bd7e935b-3b86-4ed7-9d93-5549ef16f99d",
+      "sequence_no": 15,
+      "timestamp": "2026-11-20T16:10:00.035915+09:00",
+      "event_type": "TOOL_RESPONDED",
+      "node_name": "execute_tools",
+      "tool_name": "get_weather",
+      "payload": {
+        "cached": false,
+        "ok": true,
+        "error_code": null
+      }
+    },
+    {
+      "session_id": "mock-normal",
+      "run_id": "bd7e935b-3b86-4ed7-9d93-5549ef16f99d",
+      "sequence_no": 16,
+      "timestamp": "2026-11-20T16:10:00.055297+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "execute_tools",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-normal",
+      "run_id": "bd7e935b-3b86-4ed7-9d93-5549ef16f99d",
+      "sequence_no": 17,
+      "timestamp": "2026-11-20T16:10:00.072980+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "evaluate",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-normal",
+      "run_id": "bd7e935b-3b86-4ed7-9d93-5549ef16f99d",
+      "sequence_no": 18,
+      "timestamp": "2026-11-20T16:10:00.093763+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "evaluate",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-normal",
+      "run_id": "bd7e935b-3b86-4ed7-9d93-5549ef16f99d",
+      "sequence_no": 19,
+      "timestamp": "2026-11-20T16:10:00.115970+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "respond",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-normal",
+      "run_id": "bd7e935b-3b86-4ed7-9d93-5549ef16f99d",
+      "sequence_no": 20,
+      "timestamp": "2026-11-20T16:10:00.133764+09:00",
+      "event_type": "LLM_DECISION",
+      "node_name": "respond",
+      "tool_name": null,
+      "payload": {
+        "factual_output": "python_verified"
+      }
+    },
+    {
+      "session_id": "mock-normal",
+      "run_id": "bd7e935b-3b86-4ed7-9d93-5549ef16f99d",
+      "sequence_no": 21,
+      "timestamp": "2026-11-20T16:10:00.154456+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "respond",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-normal",
+      "run_id": "bd7e935b-3b86-4ed7-9d93-5549ef16f99d",
+      "sequence_no": 22,
+      "timestamp": "2026-11-20T16:10:00.171118+09:00",
+      "event_type": "RUN_COMPLETED",
+      "node_name": null,
+      "tool_name": null,
+      "payload": {
+        "replan_count": 0,
+        "recommendation_count": 1
+      }
+    }
+  ]
+}

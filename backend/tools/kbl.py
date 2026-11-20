@@ -31,9 +31,11 @@ def search_kbl_games(args: SearchGamesInput, settings: Settings):
         return failure('NO_RESULT', '해당 범위에 KBL 일정이 없습니다.', meta)
     try:
         games = []
+        outside_range = 0
         for row in body:
             game_date = datetime.strptime(row['gameDate'], '%Y%m%d').date()
             if not args.from_date <= game_date <= args.to_date:
+                outside_range += 1
                 continue
             games.append(GameCandidate(match_id=row['gmkey'], home_team=row['tnameH'], away_team=row['tnameA'],
                                        start_at=start_time(row), venue_name=row.get('stadiumnameF') or row.get('stadiumname') or None,
@@ -41,6 +43,8 @@ def search_kbl_games(args: SearchGamesInput, settings: Settings):
         meta.response_fields = sorted(body[0])
     except (KeyError, TypeError, ValueError, ValidationError):
         return failure('MISSING_FIELD', 'KBL 후보 필수 필드가 누락되거나 변경되었습니다.', meta)
+    if outside_range:
+        meta.warnings.append(f'KBL이 반환한 요청 범위 밖 일정 {outside_range}건을 제외했습니다.')
     if not games:
         return failure('NO_RESULT', '요청 날짜 범위에 해당하는 일정이 없습니다.', meta)
     return ToolSuccess(data=games, meta=meta)

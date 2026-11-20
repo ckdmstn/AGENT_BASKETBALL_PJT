@@ -132,6 +132,7 @@ def test_replan_maximum_three_with_authorized_date_alternatives():
     r = runner([analysis(preferred_team='LG', fallback_teams_allowed=True, alternative_date_ranges=alternatives)], FakeTools([])).run(
         'LG 경기 없으면 다른 팀도 괜찮아. 대체 날짜: 2026-11-20,2026-11-21,2026-11-22 허용해')
     assert r.replan_count == 3 and len(r.relaxation_history) == 3
+    assert '재계획 상한에 도달해 추가 탐색을 중단했습니다.' in r.answer
     assert not r.recommendations
     assert r.active_conditions.region == r.conditions.region
 

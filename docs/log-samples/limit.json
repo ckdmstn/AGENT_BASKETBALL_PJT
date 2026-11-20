@@ -1,0 +1,652 @@
+{
+  "environment": "Mock LLM and external Tools with real LangGraph and SQLite logging",
+  "request": "LG 경기 없으면 다른 팀도 괜찮아. 대체 날짜: 2026-11-20,2026-11-21,2026-11-22 허용해",
+  "elapsed_ms": 1401.0,
+  "answer": "조건 검증 결과를 안내합니다.\n검증된 조건 충족 경기가 없습니다. 불충족 또는 미확인 사유를 확인해 주세요.\n명시적으로 허용한 대안으로 3회 재계획했습니다.\n재계획 상한에 도달해 추가 탐색을 중단했습니다.\n일부 정보 조회에 실패했습니다. 오류 목록을 확인해 주세요.",
+  "recommendations": 0,
+  "excluded": 0,
+  "replan_count": 3,
+  "errors": [
+    "NO_RESULT"
+  ],
+  "events": [
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 1,
+      "timestamp": "2026-11-20T16:10:01.093216+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "analyze",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 2,
+      "timestamp": "2026-11-20T16:10:01.117058+09:00",
+      "event_type": "LLM_DECISION",
+      "node_name": "analyze",
+      "tool_name": null,
+      "payload": {
+        "intent": "plan",
+        "changed_fields": [
+          "date_range",
+          "preferred_team",
+          "fallback_teams_allowed",
+          "alternative_date_ranges"
+        ],
+        "reason": "요청 의도와 명시적으로 변경한 조건을 추출함"
+      }
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 3,
+      "timestamp": "2026-11-20T16:10:01.136486+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "analyze",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 4,
+      "timestamp": "2026-11-20T16:10:01.157013+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "plan",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 5,
+      "timestamp": "2026-11-20T16:10:01.178895+09:00",
+      "event_type": "LLM_DECISION",
+      "node_name": "plan",
+      "tool_name": null,
+      "payload": {
+        "tools": [
+          "search_kbl_games",
+          "get_kbl_game_detail",
+          "search_arena"
+        ],
+        "reason": "필요한 정보만 조회"
+      }
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 6,
+      "timestamp": "2026-11-20T16:10:01.203036+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "plan",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 7,
+      "timestamp": "2026-11-20T16:10:01.226107+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "execute_tools",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 8,
+      "timestamp": "2026-11-20T16:10:01.245285+09:00",
+      "event_type": "TOOL_REQUESTED",
+      "node_name": "execute_tools",
+      "tool_name": "search_kbl_games",
+      "payload": {
+        "arguments": {
+          "from_date": "2026-11-19",
+          "to_date": "2026-11-19"
+        }
+      }
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 9,
+      "timestamp": "2026-11-20T16:10:01.261266+09:00",
+      "event_type": "TOOL_RESPONDED",
+      "node_name": "execute_tools",
+      "tool_name": "search_kbl_games",
+      "payload": {
+        "cached": false,
+        "ok": false,
+        "error_code": "NO_RESULT"
+      }
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 10,
+      "timestamp": "2026-11-20T16:10:01.282109+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "execute_tools",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 11,
+      "timestamp": "2026-11-20T16:10:01.311067+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "evaluate",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 12,
+      "timestamp": "2026-11-20T16:10:01.331209+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "evaluate",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 13,
+      "timestamp": "2026-11-20T16:10:01.358291+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "replan",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 14,
+      "timestamp": "2026-11-20T16:10:01.375926+09:00",
+      "event_type": "REPLAN_STARTED",
+      "node_name": "replan",
+      "tool_name": null,
+      "payload": {
+        "attempt": 1,
+        "changes": {
+          "preferred_team": null
+        }
+      }
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 15,
+      "timestamp": "2026-11-20T16:10:01.403154+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "replan",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 16,
+      "timestamp": "2026-11-20T16:10:01.422495+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "plan",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 17,
+      "timestamp": "2026-11-20T16:10:01.439415+09:00",
+      "event_type": "LLM_DECISION",
+      "node_name": "plan",
+      "tool_name": null,
+      "payload": {
+        "tools": [
+          "search_kbl_games",
+          "get_kbl_game_detail",
+          "search_arena"
+        ],
+        "reason": "필요한 정보만 조회"
+      }
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 18,
+      "timestamp": "2026-11-20T16:10:01.460077+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "plan",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 19,
+      "timestamp": "2026-11-20T16:10:01.491269+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "execute_tools",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 20,
+      "timestamp": "2026-11-20T16:10:01.517419+09:00",
+      "event_type": "TOOL_RESPONDED",
+      "node_name": "execute_tools",
+      "tool_name": "search_kbl_games",
+      "payload": {
+        "cached": true,
+        "ok": false,
+        "error_code": "NO_RESULT"
+      }
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 21,
+      "timestamp": "2026-11-20T16:10:01.545308+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "execute_tools",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 22,
+      "timestamp": "2026-11-20T16:10:01.578254+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "evaluate",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 23,
+      "timestamp": "2026-11-20T16:10:01.603471+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "evaluate",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 24,
+      "timestamp": "2026-11-20T16:10:01.636382+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "replan",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 25,
+      "timestamp": "2026-11-20T16:10:01.672042+09:00",
+      "event_type": "REPLAN_STARTED",
+      "node_name": "replan",
+      "tool_name": null,
+      "payload": {
+        "attempt": 2,
+        "changes": {
+          "date_range": {
+            "from_date": "2026-11-20",
+            "to_date": "2026-11-20"
+          }
+        }
+      }
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 26,
+      "timestamp": "2026-11-20T16:10:01.704565+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "replan",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 27,
+      "timestamp": "2026-11-20T16:10:01.759818+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "plan",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 28,
+      "timestamp": "2026-11-20T16:10:01.786785+09:00",
+      "event_type": "LLM_DECISION",
+      "node_name": "plan",
+      "tool_name": null,
+      "payload": {
+        "tools": [
+          "search_kbl_games",
+          "get_kbl_game_detail",
+          "search_arena"
+        ],
+        "reason": "필요한 정보만 조회"
+      }
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 29,
+      "timestamp": "2026-11-20T16:10:01.809913+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "plan",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 30,
+      "timestamp": "2026-11-20T16:10:01.861852+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "execute_tools",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 31,
+      "timestamp": "2026-11-20T16:10:01.890400+09:00",
+      "event_type": "TOOL_REQUESTED",
+      "node_name": "execute_tools",
+      "tool_name": "search_kbl_games",
+      "payload": {
+        "arguments": {
+          "from_date": "2026-11-20",
+          "to_date": "2026-11-20"
+        }
+      }
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 32,
+      "timestamp": "2026-11-20T16:10:01.920186+09:00",
+      "event_type": "TOOL_RESPONDED",
+      "node_name": "execute_tools",
+      "tool_name": "search_kbl_games",
+      "payload": {
+        "cached": false,
+        "ok": false,
+        "error_code": "NO_RESULT"
+      }
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 33,
+      "timestamp": "2026-11-20T16:10:01.942765+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "execute_tools",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 34,
+      "timestamp": "2026-11-20T16:10:01.972733+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "evaluate",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 35,
+      "timestamp": "2026-11-20T16:10:01.993915+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "evaluate",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 36,
+      "timestamp": "2026-11-20T16:10:02.019348+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "replan",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 37,
+      "timestamp": "2026-11-20T16:10:02.042714+09:00",
+      "event_type": "REPLAN_STARTED",
+      "node_name": "replan",
+      "tool_name": null,
+      "payload": {
+        "attempt": 3,
+        "changes": {
+          "date_range": {
+            "from_date": "2026-11-21",
+            "to_date": "2026-11-21"
+          }
+        }
+      }
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 38,
+      "timestamp": "2026-11-20T16:10:02.067559+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "replan",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 39,
+      "timestamp": "2026-11-20T16:10:02.098726+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "plan",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 40,
+      "timestamp": "2026-11-20T16:10:02.118127+09:00",
+      "event_type": "LLM_DECISION",
+      "node_name": "plan",
+      "tool_name": null,
+      "payload": {
+        "tools": [
+          "search_kbl_games",
+          "get_kbl_game_detail",
+          "search_arena"
+        ],
+        "reason": "필요한 정보만 조회"
+      }
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 41,
+      "timestamp": "2026-11-20T16:10:02.135007+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "plan",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 42,
+      "timestamp": "2026-11-20T16:10:02.160236+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "execute_tools",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 43,
+      "timestamp": "2026-11-20T16:10:02.188126+09:00",
+      "event_type": "TOOL_REQUESTED",
+      "node_name": "execute_tools",
+      "tool_name": "search_kbl_games",
+      "payload": {
+        "arguments": {
+          "from_date": "2026-11-21",
+          "to_date": "2026-11-21"
+        }
+      }
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 44,
+      "timestamp": "2026-11-20T16:10:02.207165+09:00",
+      "event_type": "TOOL_RESPONDED",
+      "node_name": "execute_tools",
+      "tool_name": "search_kbl_games",
+      "payload": {
+        "cached": false,
+        "ok": false,
+        "error_code": "NO_RESULT"
+      }
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 45,
+      "timestamp": "2026-11-20T16:10:02.235757+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "execute_tools",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 46,
+      "timestamp": "2026-11-20T16:10:02.260107+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "evaluate",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 47,
+      "timestamp": "2026-11-20T16:10:02.288979+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "evaluate",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 48,
+      "timestamp": "2026-11-20T16:10:02.307617+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "respond",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 49,
+      "timestamp": "2026-11-20T16:10:02.329897+09:00",
+      "event_type": "LLM_DECISION",
+      "node_name": "respond",
+      "tool_name": null,
+      "payload": {
+        "factual_output": "python_verified"
+      }
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 50,
+      "timestamp": "2026-11-20T16:10:02.386362+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "respond",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-limit",
+      "run_id": "6c2070e4-5e42-4905-a688-3ffff501a663",
+      "sequence_no": 51,
+      "timestamp": "2026-11-20T16:10:02.431087+09:00",
+      "event_type": "RUN_COMPLETED",
+      "node_name": null,
+      "tool_name": null,
+      "payload": {
+        "replan_count": 3,
+        "recommendation_count": 0
+      }
+    }
+  ]
+}

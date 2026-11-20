@@ -232,6 +232,8 @@ class Nodes:
             lines.append(f"추가 제외·미확인 후보 {len(state['excluded']) - 3}건은 구조화된 checks를 확인해 주세요.")
         if state['relaxation_history']:
             lines.append(f"명시적으로 허용한 대안으로 {state['replan_count']}회 재계획했습니다.")
+        if not state['eligible'] and state['replan_count'] >= min(3, state['max_replans']):
+            lines.append('재계획 상한에 도달해 추가 탐색을 중단했습니다.')
         if state['errors']:
             lines.append('일부 정보 조회에 실패했습니다. 오류 목록을 확인해 주세요.')
         lines.extend(warning for warning in state['warnings'] if '허용' in warning and '확인' in warning)

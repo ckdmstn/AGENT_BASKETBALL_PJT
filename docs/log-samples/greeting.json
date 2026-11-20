@@ -1,0 +1,117 @@
+{
+  "environment": "Mock LLM and external Tools with real LangGraph and SQLite logging",
+  "request": "안녕하세요",
+  "elapsed_ms": 383.37,
+  "answer": "안녕하세요. 날짜·지역·선호팀 등 원하는 직관 조건을 알려 주세요.",
+  "recommendations": 0,
+  "excluded": 0,
+  "replan_count": 0,
+  "errors": [],
+  "events": [
+    {
+      "session_id": "mock-greeting",
+      "run_id": "1511ec09-6d03-4a7a-81c9-e923de5d79b3",
+      "sequence_no": 1,
+      "timestamp": "2026-11-20T16:10:03.120481+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "analyze",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-greeting",
+      "run_id": "1511ec09-6d03-4a7a-81c9-e923de5d79b3",
+      "sequence_no": 2,
+      "timestamp": "2026-11-20T16:10:03.171470+09:00",
+      "event_type": "LLM_DECISION",
+      "node_name": "analyze",
+      "tool_name": null,
+      "payload": {
+        "intent": "greeting",
+        "changed_fields": [],
+        "reason": "요청 의도와 명시적으로 변경한 조건을 추출함"
+      }
+    },
+    {
+      "session_id": "mock-greeting",
+      "run_id": "1511ec09-6d03-4a7a-81c9-e923de5d79b3",
+      "sequence_no": 3,
+      "timestamp": "2026-11-20T16:10:03.251443+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "analyze",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-greeting",
+      "run_id": "1511ec09-6d03-4a7a-81c9-e923de5d79b3",
+      "sequence_no": 4,
+      "timestamp": "2026-11-20T16:10:03.346865+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "plan",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-greeting",
+      "run_id": "1511ec09-6d03-4a7a-81c9-e923de5d79b3",
+      "sequence_no": 5,
+      "timestamp": "2026-11-20T16:10:03.383755+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "plan",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-greeting",
+      "run_id": "1511ec09-6d03-4a7a-81c9-e923de5d79b3",
+      "sequence_no": 6,
+      "timestamp": "2026-11-20T16:10:03.408005+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "respond",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-greeting",
+      "run_id": "1511ec09-6d03-4a7a-81c9-e923de5d79b3",
+      "sequence_no": 7,
+      "timestamp": "2026-11-20T16:10:03.427621+09:00",
+      "event_type": "LLM_DECISION",
+      "node_name": "respond",
+      "tool_name": null,
+      "payload": {
+        "factual_output": "python_verified"
+      }
+    },
+    {
+      "session_id": "mock-greeting",
+      "run_id": "1511ec09-6d03-4a7a-81c9-e923de5d79b3",
+      "sequence_no": 8,
+      "timestamp": "2026-11-20T16:10:03.454552+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "respond",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-greeting",
+      "run_id": "1511ec09-6d03-4a7a-81c9-e923de5d79b3",
+      "sequence_no": 9,
+      "timestamp": "2026-11-20T16:10:03.473623+09:00",
+      "event_type": "RUN_COMPLETED",
+      "node_name": null,
+      "tool_name": null,
+      "payload": {
+        "replan_count": 0,
+        "recommendation_count": 0
+      }
+    }
+  ]
+}
