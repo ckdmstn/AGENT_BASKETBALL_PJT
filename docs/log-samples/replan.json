@@ -1,0 +1,402 @@
+{
+  "environment": "Mock LLM and external Tools with real LangGraph and SQLite logging",
+  "request": "서울 LG 경기. LG 경기 없으면 다른 팀도 괜찮아",
+  "elapsed_ms": 814.33,
+  "answer": "조건 검증 결과를 안내합니다.\n2026-11-19T19:00:00+09:00: 서울 삼성 vs 서울 SK / 잠실학생체육관\n추천 근거: 경기 시작=2026-11-19T19:00:00+09:00; 요청 범위=2026-11-19~2026-11-19; 요청 지역=서울; 확인 주소=서울 송파구 올림픽로 25\n명시적으로 허용한 대안으로 1회 재계획했습니다.",
+  "recommendations": 1,
+  "excluded": 0,
+  "replan_count": 1,
+  "errors": [],
+  "events": [
+    {
+      "session_id": "mock-replan",
+      "run_id": "ec534d1b-67d3-4ada-94f0-f4b68d5ea22f",
+      "sequence_no": 1,
+      "timestamp": "2026-11-20T16:10:00.231409+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "analyze",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-replan",
+      "run_id": "ec534d1b-67d3-4ada-94f0-f4b68d5ea22f",
+      "sequence_no": 2,
+      "timestamp": "2026-11-20T16:10:00.259004+09:00",
+      "event_type": "LLM_DECISION",
+      "node_name": "analyze",
+      "tool_name": null,
+      "payload": {
+        "intent": "plan",
+        "changed_fields": [
+          "date_range",
+          "region",
+          "preferred_team",
+          "fallback_teams_allowed"
+        ],
+        "reason": "요청 의도와 명시적으로 변경한 조건을 추출함"
+      }
+    },
+    {
+      "session_id": "mock-replan",
+      "run_id": "ec534d1b-67d3-4ada-94f0-f4b68d5ea22f",
+      "sequence_no": 3,
+      "timestamp": "2026-11-20T16:10:00.278638+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "analyze",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-replan",
+      "run_id": "ec534d1b-67d3-4ada-94f0-f4b68d5ea22f",
+      "sequence_no": 4,
+      "timestamp": "2026-11-20T16:10:00.305126+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "plan",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-replan",
+      "run_id": "ec534d1b-67d3-4ada-94f0-f4b68d5ea22f",
+      "sequence_no": 5,
+      "timestamp": "2026-11-20T16:10:00.328895+09:00",
+      "event_type": "LLM_DECISION",
+      "node_name": "plan",
+      "tool_name": null,
+      "payload": {
+        "tools": [
+          "search_kbl_games",
+          "get_kbl_game_detail",
+          "search_arena"
+        ],
+        "reason": "필요한 정보만 조회"
+      }
+    },
+    {
+      "session_id": "mock-replan",
+      "run_id": "ec534d1b-67d3-4ada-94f0-f4b68d5ea22f",
+      "sequence_no": 6,
+      "timestamp": "2026-11-20T16:10:00.372906+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "plan",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-replan",
+      "run_id": "ec534d1b-67d3-4ada-94f0-f4b68d5ea22f",
+      "sequence_no": 7,
+      "timestamp": "2026-11-20T16:10:00.409820+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "execute_tools",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-replan",
+      "run_id": "ec534d1b-67d3-4ada-94f0-f4b68d5ea22f",
+      "sequence_no": 8,
+      "timestamp": "2026-11-20T16:10:00.446731+09:00",
+      "event_type": "TOOL_REQUESTED",
+      "node_name": "execute_tools",
+      "tool_name": "search_kbl_games",
+      "payload": {
+        "arguments": {
+          "from_date": "2026-11-19",
+          "to_date": "2026-11-19"
+        }
+      }
+    },
+    {
+      "session_id": "mock-replan",
+      "run_id": "ec534d1b-67d3-4ada-94f0-f4b68d5ea22f",
+      "sequence_no": 9,
+      "timestamp": "2026-11-20T16:10:00.482516+09:00",
+      "event_type": "TOOL_RESPONDED",
+      "node_name": "execute_tools",
+      "tool_name": "search_kbl_games",
+      "payload": {
+        "cached": false,
+        "ok": true,
+        "error_code": null
+      }
+    },
+    {
+      "session_id": "mock-replan",
+      "run_id": "ec534d1b-67d3-4ada-94f0-f4b68d5ea22f",
+      "sequence_no": 10,
+      "timestamp": "2026-11-20T16:10:00.505756+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "execute_tools",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-replan",
+      "run_id": "ec534d1b-67d3-4ada-94f0-f4b68d5ea22f",
+      "sequence_no": 11,
+      "timestamp": "2026-11-20T16:10:00.531431+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "evaluate",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-replan",
+      "run_id": "ec534d1b-67d3-4ada-94f0-f4b68d5ea22f",
+      "sequence_no": 12,
+      "timestamp": "2026-11-20T16:10:00.554456+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "evaluate",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-replan",
+      "run_id": "ec534d1b-67d3-4ada-94f0-f4b68d5ea22f",
+      "sequence_no": 13,
+      "timestamp": "2026-11-20T16:10:00.577658+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "replan",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-replan",
+      "run_id": "ec534d1b-67d3-4ada-94f0-f4b68d5ea22f",
+      "sequence_no": 14,
+      "timestamp": "2026-11-20T16:10:00.609679+09:00",
+      "event_type": "REPLAN_STARTED",
+      "node_name": "replan",
+      "tool_name": null,
+      "payload": {
+        "attempt": 1,
+        "changes": {
+          "preferred_team": null
+        }
+      }
+    },
+    {
+      "session_id": "mock-replan",
+      "run_id": "ec534d1b-67d3-4ada-94f0-f4b68d5ea22f",
+      "sequence_no": 15,
+      "timestamp": "2026-11-20T16:10:00.633736+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "replan",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-replan",
+      "run_id": "ec534d1b-67d3-4ada-94f0-f4b68d5ea22f",
+      "sequence_no": 16,
+      "timestamp": "2026-11-20T16:10:00.658587+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "plan",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-replan",
+      "run_id": "ec534d1b-67d3-4ada-94f0-f4b68d5ea22f",
+      "sequence_no": 17,
+      "timestamp": "2026-11-20T16:10:00.681568+09:00",
+      "event_type": "LLM_DECISION",
+      "node_name": "plan",
+      "tool_name": null,
+      "payload": {
+        "tools": [
+          "search_kbl_games",
+          "get_kbl_game_detail",
+          "search_arena"
+        ],
+        "reason": "필요한 정보만 조회"
+      }
+    },
+    {
+      "session_id": "mock-replan",
+      "run_id": "ec534d1b-67d3-4ada-94f0-f4b68d5ea22f",
+      "sequence_no": 18,
+      "timestamp": "2026-11-20T16:10:00.708860+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "plan",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-replan",
+      "run_id": "ec534d1b-67d3-4ada-94f0-f4b68d5ea22f",
+      "sequence_no": 19,
+      "timestamp": "2026-11-20T16:10:00.739700+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "execute_tools",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-replan",
+      "run_id": "ec534d1b-67d3-4ada-94f0-f4b68d5ea22f",
+      "sequence_no": 20,
+      "timestamp": "2026-11-20T16:10:00.765494+09:00",
+      "event_type": "TOOL_RESPONDED",
+      "node_name": "execute_tools",
+      "tool_name": "search_kbl_games",
+      "payload": {
+        "cached": true,
+        "ok": true,
+        "error_code": null
+      }
+    },
+    {
+      "session_id": "mock-replan",
+      "run_id": "ec534d1b-67d3-4ada-94f0-f4b68d5ea22f",
+      "sequence_no": 21,
+      "timestamp": "2026-11-20T16:10:00.786038+09:00",
+      "event_type": "TOOL_REQUESTED",
+      "node_name": "execute_tools",
+      "tool_name": "get_kbl_game_detail",
+      "payload": {
+        "arguments": {
+          "match_id": "one"
+        }
+      }
+    },
+    {
+      "session_id": "mock-replan",
+      "run_id": "ec534d1b-67d3-4ada-94f0-f4b68d5ea22f",
+      "sequence_no": 22,
+      "timestamp": "2026-11-20T16:10:00.802123+09:00",
+      "event_type": "TOOL_RESPONDED",
+      "node_name": "execute_tools",
+      "tool_name": "get_kbl_game_detail",
+      "payload": {
+        "cached": false,
+        "ok": true,
+        "error_code": null
+      }
+    },
+    {
+      "session_id": "mock-replan",
+      "run_id": "ec534d1b-67d3-4ada-94f0-f4b68d5ea22f",
+      "sequence_no": 23,
+      "timestamp": "2026-11-20T16:10:00.827333+09:00",
+      "event_type": "TOOL_REQUESTED",
+      "node_name": "execute_tools",
+      "tool_name": "search_arena",
+      "payload": {
+        "arguments": {
+          "venue_name": "잠실학생체육관"
+        }
+      }
+    },
+    {
+      "session_id": "mock-replan",
+      "run_id": "ec534d1b-67d3-4ada-94f0-f4b68d5ea22f",
+      "sequence_no": 24,
+      "timestamp": "2026-11-20T16:10:00.852096+09:00",
+      "event_type": "TOOL_RESPONDED",
+      "node_name": "execute_tools",
+      "tool_name": "search_arena",
+      "payload": {
+        "cached": false,
+        "ok": true,
+        "error_code": null
+      }
+    },
+    {
+      "session_id": "mock-replan",
+      "run_id": "ec534d1b-67d3-4ada-94f0-f4b68d5ea22f",
+      "sequence_no": 25,
+      "timestamp": "2026-11-20T16:10:00.874864+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "execute_tools",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-replan",
+      "run_id": "ec534d1b-67d3-4ada-94f0-f4b68d5ea22f",
+      "sequence_no": 26,
+      "timestamp": "2026-11-20T16:10:00.895368+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "evaluate",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-replan",
+      "run_id": "ec534d1b-67d3-4ada-94f0-f4b68d5ea22f",
+      "sequence_no": 27,
+      "timestamp": "2026-11-20T16:10:00.919939+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "evaluate",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-replan",
+      "run_id": "ec534d1b-67d3-4ada-94f0-f4b68d5ea22f",
+      "sequence_no": 28,
+      "timestamp": "2026-11-20T16:10:00.946450+09:00",
+      "event_type": "NODE_STARTED",
+      "node_name": "respond",
+      "tool_name": null,
+      "payload": {}
+    },
+    {
+      "session_id": "mock-replan",
+      "run_id": "ec534d1b-67d3-4ada-94f0-f4b68d5ea22f",
+      "sequence_no": 29,
+      "timestamp": "2026-11-20T16:10:00.968081+09:00",
+      "event_type": "LLM_DECISION",
+      "node_name": "respond",
+      "tool_name": null,
+      "payload": {
+        "factual_output": "python_verified"
+      }
+    },
+    {
+      "session_id": "mock-replan",
+      "run_id": "ec534d1b-67d3-4ada-94f0-f4b68d5ea22f",
+      "sequence_no": 30,
+      "timestamp": "2026-11-20T16:10:00.983850+09:00",
+      "event_type": "NODE_COMPLETED",
+      "node_name": "respond",
+      "tool_name": null,
+      "payload": {
+        "ok": true
+      }
+    },
+    {
+      "session_id": "mock-replan",
+      "run_id": "ec534d1b-67d3-4ada-94f0-f4b68d5ea22f",
+      "sequence_no": 31,
+      "timestamp": "2026-11-20T16:10:01.009285+09:00",
+      "event_type": "RUN_COMPLETED",
+      "node_name": null,
+      "tool_name": null,
+      "payload": {
+        "replan_count": 1,
+        "recommendation_count": 1
+      }
+    }
+  ]
+}

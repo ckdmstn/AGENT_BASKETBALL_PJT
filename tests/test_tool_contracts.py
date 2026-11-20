@@ -148,6 +148,15 @@ def test_kbl_detail_id_mismatch_is_rejected():
     assert result.error.code == 'MISSING_FIELD'
 
 
+def test_kbl_defaults_to_kst_today_and_discloses_out_of_range_data():
+    today = datetime.now(timezone(timedelta(hours=9))).strftime('%Y%m%d')
+    with patch('requests.get', return_value=response([{'gameDate': '20000101'}])):
+        result = invoke('search_kbl_games', {}, settings())
+    assert result.error.code == 'NO_RESULT'
+    assert result.meta.actual_query['fromDate'] == result.meta.actual_query['toDate'] == today
+    assert 'KBL이 반환한 요청 범위 밖 일정 1건을 제외했습니다.' in result.meta.warnings
+
+
 def test_kbl_empty_list_and_missing_fields():
     for body, code in [([], 'NO_RESULT'), ([{'gmkey': 'x'}], 'MISSING_FIELD')]:
         with patch('requests.get', return_value=response(body)):

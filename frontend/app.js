@@ -132,8 +132,16 @@ async function sendChat(message, { retry = false } = {}) {
     if (!failed && ["allowed", "denied"].includes(response.team_permission)) {
       allowOtherTeams.checked = response.team_permission === "allowed";
     }
-    notice("chat-status", failed ? "추천 요청을 완료하지 못했습니다. 다시 시도할 수 있습니다."
-      : hasLookupIssue(response) ? "일부 조회가 실패했습니다. 추천과 제외 후보의 상태를 확인해 주세요." : "", failed ? "error" : "warning");
+    const missingKey = response.errors.some(({ code }) => code === "MISSING_API_KEY");
+    let status = "";
+    if (missingKey) {
+      status = "필요한 API 키가 설정되지 않았습니다. 서버 설정을 확인해 주세요.";
+    } else if (failed) {
+      status = "추천 요청을 완료하지 못했습니다. 다시 시도할 수 있습니다.";
+    } else if (hasLookupIssue(response)) {
+      status = "일부 조회가 실패했습니다. 추천과 제외 후보의 상태를 확인해 주세요.";
+    }
+    notice("chat-status", status, failed ? "error" : "warning");
     if (failed) retryMessage = message;
   } catch (error) {
     showPermission({});
