@@ -7,8 +7,10 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from backend.agent.graph import AgentRunner
+from backend.agent.logging import LoggingAgent
 from backend.agent.sessions import SQLiteSessions
 from backend.agent.state import ChatRequest, ChatResponse
+from backend.config import load_settings
 from backend.database import Database, get_database
 from backend.plans import router as plans_router
 
@@ -18,7 +20,8 @@ app.include_router(plans_router)
 
 @lru_cache
 def get_agent_runner(db: Database = Depends(get_database)) -> AgentRunner:
-    return AgentRunner(sessions=SQLiteSessions(db))
+    settings = load_settings()
+    return AgentRunner(settings=settings, sessions=SQLiteSessions(db), event_subscriber=LoggingAgent(db, settings))
 
 
 @app.exception_handler(SQLiteError)

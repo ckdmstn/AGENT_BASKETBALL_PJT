@@ -30,6 +30,10 @@ class EventBus:
     def subscribe(self, subscriber):
         self._subscribers.append(subscriber)
 
+    def unsubscribe(self, subscriber):
+        if subscriber in self._subscribers:
+            self._subscribers.remove(subscriber)
+
     def publish(self, event_type: EventType, *, node_name=None, tool_name=None, payload=None):
         event = AgentEvent(session_id=self.session_id, run_id=self.run_id,
                            sequence_no=len(self.events) + 1, event_type=event_type,
