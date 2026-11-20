@@ -129,11 +129,13 @@ def overlap_result(conn, plan: Plan) -> PlanSaved:
                      overlap_warnings=[warning for reason, warning in warnings.items() if reason in reasons])
 
 
-@router.post('', status_code=201)
+@router.post('', status_code=201, responses={409: {'description': '이미 저장한 경기'}})
 def create_plan(request: PlanCreate, db: DB) -> PlanSaved:
     now = datetime.now(KST).isoformat(timespec='microseconds')
     data = values(request)
     with db.connection(write=True) as conn:
+        if conn.execute('SELECT 1 FROM plans WHERE match_id = ? LIMIT 1', (request.match_id,)).fetchone():
+            raise HTTPException(409, '이미 저장한 경기입니다. 저장한 계획에서 확인하거나 수정해 주세요.')
         columns = ', '.join(PLAN_COLUMNS)
         placeholders = ', '.join('?' for _ in PLAN_COLUMNS)
         cursor = conn.execute(
