@@ -1,5 +1,13 @@
 # 작업 01 검증 기록
 
+## Task 09 — 계획 저장 간소화 (2026-11-20 KST)
+
+- PR #16 병합을 포함한 `main`의 `0873e3a` 기준 174개 통과. 변경 후 `.\.venv\Scripts\python.exe -m pytest -q` **178 passed in 7.87s**. `pip check`, `node --check frontend/app.js`, Git 공백 검사도 통과했다.
+- 임시 SQLite로 종료 시각·메모 생략 시 `null`, 동일 경기, 시간대가 다른 동일 시작 시각, 기존 구간 내 시작과 종료 경계, 중복 ID 제거·저장 성공, 자기 자신 제외, 메모 PATCH 후 기존 종료 시각 보존 및 삭제를 확인했다.
+- `node .verification/browser/plan-save.cjs`에서 1440px·390px 모달의 종료 입력 제거, 추천 카드에서 메모 있는 계획과 없는 계획 저장, 실제 전송된 `end_at: null`, 메모 수정·삭제, 동일 경기와 동일 시작 경고를 확인했다. 추천·로그와 `node .verification/browser/cards-permission.cjs`의 권한·세션 회귀도 통과했다.
+- Chromium 테스트는 Mock LLM·Tool 및 임시 SQLite를 사용했다. 실제 외부 API·LLM과 다른 브라우저는 검증하지 않았다. 기존 데이터베이스는 사용하지 않았다. 종료 시각이 없는 경기는 시작점으로만 평가하므로 이후 구간의 중복 여부를 판단할 수 없다.
+- 로컬 캡처는 `.verification/browser/plan-save-desktop.png`, `.verification/browser/plan-save-mobile.png`에 있다.
+
 ## Task 08 — 추천 채팅 요약과 접기·펼치기 (2026-11-20 KST)
 
 - PR #14가 포함된 `main`의 `8001299`를 기준으로 시작했다. 변경 전 pytest 174개, 변경 후 `.\.venv\Scripts\python.exe -m pytest -q` **174 passed in 7.79s**. `pip check`, `node --check frontend/app.js`, Git 공백 검사 통과.
