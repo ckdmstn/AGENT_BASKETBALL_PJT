@@ -29,8 +29,8 @@ KBL 직관 추천을 대상으로 날짜, 지역, 시작 시각, 팀, 강수 조
 | NF3002 | 오류 상세와 키 노출 방지 | [코드](../backend/main.py) | [테스트](../tests/test_chat_api.py) | [25번](CHECKLIST.md) · PASS |
 | NF3003 | 단일 Tool 실패 내성 | [코드](../backend/agent/nodes.py) | [테스트](../tests/test_agent.py) | [7번](CHECKLIST.md) · PASS |
 | NF3004 | 최대 3회 재계획 | [코드](../backend/agent/nodes.py) | [테스트](../tests/test_agent.py) | [10번](CHECKLIST.md) · PASS |
-| NF3005 | 대표 시나리오 응답 시간 | [코드](../backend/agent/graph.py) | [테스트](../tests/test_agent.py) | [23번](CHECKLIST.md) · BLOCKED |
+| NF3005 | 대표 시나리오 응답 시간 | [코드](../backend/agent/graph.py) | [반복 측정과 기준](VERIFICATION.md#task-14--실연동-성능-및-제출-최종-재검증) | [23번](CHECKLIST.md) · BLOCKED |
 | NF3006 | 프론트·백엔드 및 Agent·Tool 분리 | [코드](../backend/main.py) | [테스트](../tests/test_web.py) | [26번](CHECKLIST.md) · PASS |
-| NF3007 | 외부 API 출처·약관·호출 한도 | [코드](../backend/tools/kbl.py) | [공급자 정보](TOOL_SPEC.md) | [26번](CHECKLIST.md) · BLOCKED |
+| NF3007 | 외부 API 출처·약관·호출 한도 | [코드](../backend/tools/kbl.py) | [공식 정책과 문의 문안](TOOL_SPEC.md#외부-이용-조건-재확인--2026-11-20-kst) | [26번](CHECKLIST.md) · BLOCKED |
 
 F3020–F3023은 선택 심화 기능이며 이번 제출 범위에서 선택하지 않았다. 필수 제출 상태는 [체크리스트](CHECKLIST.md)를 기준으로 확인한다.
