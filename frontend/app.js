@@ -277,14 +277,19 @@ function matchTitle(game) {
 
 function gameCard(assessment, recommended, owner) {
   const info = match(assessment);
-  const card = element("article", null, recommended ? "entry game" : "entry");
-  const heading = element("div", null, "section-head");
-  heading.append(element("h3", matchTitle(info)), statusBadge(assessment.status));
-  card.append(heading, element("p", dateLabel(info.start_at)),
-    element("p", info.venue_name || "경기장 미확인"),
-    element("p", info.venue_address || "검증된 주소 미확인", "muted"));
+  const card = element("details", null, recommended ? "entry game-card game" : "entry game-card");
+  const summary = element("summary", null, "game-summary");
+  const matchInfo = element("span", null, "game-summary-info");
+  matchInfo.append(element("strong", matchTitle(info)), element("span", dateLabel(info.start_at)),
+    element("span", info.venue_name || "경기장 미확인"));
+  const indicator = element("span", null, "game-toggle");
+  indicator.append(element("span", "상세 보기", "game-open"), element("span", "상세 닫기", "game-close"));
+  summary.append(matchInfo, statusBadge(assessment.status), indicator);
+  const detail = element("div", null, "game-details");
+  detail.append(element("p", info.venue_address || "검증된 주소 미확인", "muted"));
+  card.append(summary, detail);
   const link = assessment.arena?.verified_kbl_arena && safeLink(assessment.arena.place_url);
-  if (link) card.append(link);
+  if (link) detail.append(link);
 
   const weather = assessment.weather;
   if (weather?.available === true) {
@@ -295,15 +300,15 @@ function gameCard(assessment, recommended, owner) {
     const weatherText = "강수확률 " + (pop == null ? "미확인" : pop + "%")
       + " · 기온 " + (temp == null ? "미확인" : temp + " ℃")
       + " · 강수량 " + (amountLabel || "미확인");
-    card.append(element("p", "예보 대상 " + dateLabel(weather.forecast_at), "muted"),
+    detail.append(element("p", "예보 대상 " + dateLabel(weather.forecast_at), "muted"),
       element("p", weatherText));
   } else if (weather) {
-    card.append(element("p", "제공된 예보 없음", "muted"));
+    detail.append(element("p", "제공된 예보 없음", "muted"));
   } else {
-    card.append(element("p", "날씨 예보 미확인", "muted"));
+    detail.append(element("p", "날씨 예보 미확인", "muted"));
   }
   if (assessment.checks.weather?.status === "unknown") {
-    card.append(element("p", "해당 경기 시각의 강수 조건을 확인하지 못했습니다.", "muted"));
+    detail.append(element("p", "해당 경기 시각의 강수 조건을 확인하지 못했습니다.", "muted"));
   }
 
   const checks = element("ul", null, "checks");
@@ -313,7 +318,7 @@ function gameCard(assessment, recommended, owner) {
     checks.append(item);
   }
   if (checks.children.length) {
-    card.append(element("h4", recommended ? "추천 근거" : "제외 사유"), checks);
+    detail.append(element("h4", recommended ? "추천 근거" : "제외 사유"), checks);
   }
 
   if (recommended) {
@@ -321,8 +326,8 @@ function gameCard(assessment, recommended, owner) {
       detail: { ...info, session_id: owner },
     })));
     save.disabled = !info.match_id || !info.home_team || !info.away_team || !info.venue_name || !info.start_at;
-    card.append(save);
-    if (save.disabled) card.append(element("p", "필수 경기 정보가 확인되면 저장할 수 있습니다.", "muted"));
+    detail.append(save);
+    if (save.disabled) detail.append(element("p", "필수 경기 정보가 확인되면 저장할 수 있습니다.", "muted"));
   }
   return card;
 }
@@ -383,7 +388,7 @@ document.addEventListener("chat-result", ({ detail: response }) => {
   results.append(conditions);
 
   if (response.excluded.length) {
-    const excluded = element("details");
+    const excluded = element("details", null, "excluded-games");
     excluded.append(element("summary", "제외 후보 " + response.excluded.length + "경기"));
     for (const assessment of response.excluded) excluded.append(gameCard(assessment, false));
     results.append(excluded);

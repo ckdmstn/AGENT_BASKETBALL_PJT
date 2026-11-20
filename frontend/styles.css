@@ -98,6 +98,20 @@ textarea { resize: vertical; }
 .status.unknown { color: var(--warning-text); border-color: var(--warning-border); background: var(--warning-bg); }
 .entry, details { margin-top: .75rem; padding: .85rem; border: 1px solid var(--border); border-radius: .65rem; overflow-wrap: anywhere; }
 .game { border-left: .25rem solid var(--primary); }
+.entry.game-card { padding: 0; }
+.game-summary { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: .25rem .7rem; padding: .7rem .85rem; border-radius: .5rem; }
+.game-summary::-webkit-details-marker { display: none; }
+.game-summary:hover { background: var(--soft); }
+.game-summary-info { display: grid; min-width: 0; gap: .12rem; }
+.game-summary-info > span { color: var(--muted-strong); font-size: .88rem; font-weight: 400; }
+.game-summary .status { justify-self: end; font-weight: 500; }
+.game-toggle { grid-column: 1 / -1; justify-self: end; color: var(--primary); font-size: .88rem; }
+.game-toggle::after { content: ""; display: inline-block; width: .4rem; height: .4rem; margin-left: .48rem; border: solid currentColor; border-width: 0 2px 2px 0; transform: translateY(-.12rem) rotate(45deg); }
+.game-card[open] > .game-summary .game-toggle::after { transform: translateY(.05rem) rotate(225deg); }
+.game-close, .game-card[open] > .game-summary .game-open { display: none; }
+.game-card[open] > .game-summary .game-close { display: inline; }
+.game-details { border-top: 1px solid var(--border); padding: .8rem .85rem; }
+.game-details h4 { margin-top: .75rem; }
 .entry p { margin: .35rem 0; }
 .entry button { margin-top: .5rem; }
 summary { cursor: pointer; font-weight: 700; }
