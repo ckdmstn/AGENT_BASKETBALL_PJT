@@ -98,7 +98,7 @@ def test_invalid_patch_does_not_write(api):
 def test_overlap_across_timezones_and_adjacent_plans(api):
     client, _ = api
     first = client.post('/api/plans', json=PLAN).json()['plan']
-    adjacent = {**PLAN, 'start_at': '2026-11-19T12:00:00Z', 'end_at': '2026-11-19T13:00:00Z'}
+    adjacent = {**PLAN, 'match_id': 'adjacent', 'start_at': '2026-11-19T12:00:00Z', 'end_at': '2026-11-19T13:00:00Z'}
     second = client.post('/api/plans', json=adjacent).json()
     assert second['overlapping_plan_ids'] == []
     path = f"/api/plans/{second['plan']['id']}"
@@ -110,15 +110,67 @@ def test_overlap_across_timezones_and_adjacent_plans(api):
     assert third.json()['overlapping_plan_ids'] == [first['id'], second['plan']['id']]
 
 
-def test_missing_end_time_is_reported_for_both_sides(api):
+def test_missing_end_time_still_supports_same_game_warning(api):
     client, _ = api
     created = client.post('/api/plans', json={**PLAN, 'end_at': None}).json()
     assert created['plan']['end_at'] is None
-    assert created['overlapping_plan_ids'] == [] and created['overlap_warnings']
+    assert created['overlapping_plan_ids'] == [] and created['overlap_warnings'] == []
     known = client.post('/api/plans', json=PLAN).json()
-    assert known['overlapping_plan_ids'] == [] and known['overlap_warnings']
+    assert known['overlapping_plan_ids'] == [created['plan']['id']]
+    assert known['overlap_warnings'] == ['이미 저장한 경기입니다.']
     path = f"/api/plans/{known['plan']['id']}"
     assert client.patch(path, json={'end_at': None}).json()['plan']['end_at'] is None
+
+
+def test_omitted_end_and_note_default_to_null(api):
+    client, _ = api
+    data = {key: value for key, value in PLAN.items() if key not in ('end_at', 'note')}
+    response = client.post('/api/plans', json=data)
+    assert response.status_code == 201
+    plan = response.json()['plan']
+    assert plan['end_at'] is None and plan['note'] is None
+    assert client.get(f"/api/plans/{plan['id']}").json() == plan
+
+
+def test_duplicate_reasons_are_prioritized_and_ids_are_unique(api):
+    client, _ = api
+    same_game = client.post('/api/plans', json={**PLAN, 'end_at': None}).json()['plan']
+    same_start = client.post('/api/plans', json={**PLAN, 'match_id': 'different',
+                                               'start_at': '2026-11-19T19:00:00+09:00', 'end_at': None}).json()['plan']
+    legacy = client.post('/api/plans', json={**PLAN, 'match_id': 'legacy',
+                                           'start_at': '2026-11-19T18:00:00+09:00'}).json()['plan']
+    response = client.post('/api/plans', json={**PLAN, 'end_at': None})
+    assert response.status_code == 201
+    assert response.json()['overlapping_plan_ids'] == [same_game['id'], same_start['id'], legacy['id']]
+    assert response.json()['overlap_warnings'] == [
+        '이미 저장한 경기입니다.',
+        '같은 시각에 시작하는 다른 경기 일정이 있습니다.',
+        '기존 일정의 시간 범위와 겹칠 수 있습니다.',
+    ]
+
+
+def test_same_match_id_warns_even_when_start_changed(api):
+    client, _ = api
+    previous = client.post('/api/plans', json={**PLAN, 'end_at': None}).json()['plan']
+    response = client.post('/api/plans', json={**PLAN, 'start_at': '2026-11-20T10:00:00Z', 'end_at': None})
+    assert response.status_code == 201
+    assert response.json()['overlapping_plan_ids'] == [previous['id']]
+    assert response.json()['overlap_warnings'] == ['이미 저장한 경기입니다.']
+
+
+def test_legacy_end_boundary_and_note_patch_preserve_stored_end(api):
+    client, _ = api
+    legacy = client.post('/api/plans', json=PLAN).json()['plan']
+    response = client.post('/api/plans', json={**PLAN, 'match_id': 'boundary',
+                                              'start_at': '2026-11-19T12:00:00Z', 'end_at': None})
+    assert response.status_code == 201
+    assert response.json()['overlapping_plan_ids'] == [] and response.json()['overlap_warnings'] == []
+    path = f"/api/plans/{legacy['id']}"
+    changed = client.patch(path, json={'note': 'updated'}).json()
+    assert changed['plan']['end_at'] == legacy['end_at']
+    assert changed['overlapping_plan_ids'] == [] and changed['overlap_warnings'] == []
+    assert client.get(path).json()['end_at'] == legacy['end_at']
+    assert client.delete(path).status_code == 204
 
 
 def test_concurrent_create_checks_committed_overlap(api):

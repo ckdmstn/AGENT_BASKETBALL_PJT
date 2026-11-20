@@ -105,24 +105,28 @@ def get_row(conn, plan_id):
 
 
 def overlap_result(conn, plan: Plan) -> PlanSaved:
-    ids = []
-    warnings = []
-    if plan.end_at is None:
-        warnings.append('이 계획의 종료 시각이 없어 중복 검사를 수행할 수 없습니다.')
-    else:
-        times = values(plan)
-        ids = [row['id'] for row in conn.execute(
-            'SELECT id FROM plans WHERE id != ? AND start_at < ? AND end_at > ? ORDER BY id',
-            (plan.id, times['end_at'], times['start_at']),
-        )]
-        if ids:
-            warnings.append('시간이 겹치는 계획이 있습니다.')
-        if conn.execute(
-            'SELECT 1 FROM plans WHERE id != ? AND start_at < ? AND end_at IS NULL LIMIT 1',
-            (plan.id, times['end_at']),
-        ).fetchone():
-            warnings.append('기존 계획 중 종료 시각이 없어 중복 여부를 확인할 수 없는 일정이 있습니다.')
-    return PlanSaved(plan=plan, overlapping_plan_ids=ids, overlap_warnings=warnings)
+    times = values(plan)
+    # Stored timestamps share a fixed KST format. An open-ended plan contributes only its start instant.
+    matches = conn.execute(
+        '''SELECT id, reason FROM (
+               SELECT id, CASE
+                   WHEN match_id = :match_id THEN 'same_game'
+                   WHEN start_at = :start_at THEN 'same_start'
+                   WHEN start_at < COALESCE(:end_at, :start_at)
+                        AND COALESCE(end_at, start_at) > :start_at THEN 'time_range'
+               END AS reason
+               FROM plans WHERE id != :id
+           ) WHERE reason IS NOT NULL ORDER BY id''',
+        {'id': plan.id, 'match_id': plan.match_id, 'start_at': times['start_at'], 'end_at': times['end_at']},
+    ).fetchall()
+    reasons = {row['reason'] for row in matches}
+    warnings = {
+        'same_game': '이미 저장한 경기입니다.',
+        'same_start': '같은 시각에 시작하는 다른 경기 일정이 있습니다.',
+        'time_range': '기존 일정의 시간 범위와 겹칠 수 있습니다.',
+    }
+    return PlanSaved(plan=plan, overlapping_plan_ids=[row['id'] for row in matches],
+                     overlap_warnings=[warning for reason, warning in warnings.items() if reason in reasons])
 
 
 @router.post('', status_code=201)
