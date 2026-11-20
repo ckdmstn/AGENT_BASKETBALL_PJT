@@ -13,6 +13,7 @@ const messageInput = byId("message");
 let sessionId = null;
 let pending = false;
 let retryMessage = null;
+let teamPermission = "unknown";
 try {
   const saved = localStorage.getItem(sessionKey);
   if (saved && /^[a-zA-Z0-9_-]{1,100}$/.test(saved)) sessionId = saved;
@@ -42,12 +43,41 @@ function busyChat(busy) {
   pending = busy;
   for (const id of ["new-chat", "send", "message", "retry-chat"]) byId(id).disabled = busy;
   byId("send").textContent = busy ? "추천 요청 중…" : "보내기";
+  updatePermissionButtons();
 }
 
-async function sendChat(message, retry = false) {
+const permissionLabels = new Map([
+  ["denied", ["미허용", "선호 팀 조건을 유지합니다.", ""]],
+  ["allowed", ["허용됨", "조건에 맞는 선호 팀 경기가 없으면 다른 팀도 검토할 수 있습니다.", "met"]],
+  ["confirmation_required", ["확인 필요", "다른 팀 추천을 허용하시겠어요? 조건에 맞는 선호 팀 경기가 없을 때 다른 팀도 추천받으려면 ‘다른 팀도 허용’을 선택하세요.", "unknown"]],
+  ["unknown", ["상태 미확인", "아직 서버의 권한 상태를 확인하지 못했습니다.", ""]],
+]);
+
+function updatePermissionButtons() {
+  byId("allow-team").disabled = pending || teamPermission === "allowed";
+  byId("revoke-team").disabled = pending || teamPermission === "denied" || teamPermission === "confirmation_required";
+}
+
+function showPermission(response = null) {
+  teamPermission = permissionLabels.has(response?.team_permission) ? response.team_permission
+    : response || sessionId ? "unknown" : "denied";
+  const [label, help, style] = permissionLabels.get(teamPermission);
+  const badge = byId("team-permission");
+  badge.textContent = label;
+  badge.className = ["status", style].filter(Boolean).join(" ");
+  byId("team-permission-help").textContent = help;
+  const relaxation = byId("team-relaxation");
+  const teamRelaxed = response?.conditions?.preferred_team && response.active_conditions?.preferred_team === null
+    && response.relaxation_history?.some(({ changes }) => changes?.preferred_team === null);
+  relaxation.textContent = teamRelaxed ? "이번 실행에서 선호 팀 조건이 완화됐습니다." : "";
+  relaxation.hidden = !teamRelaxed;
+  updatePermissionButtons();
+}
+
+async function sendChat(message, { retry = false, preserveDraft = false } = {}) {
   if (!message || pending) return;
   if (!retry) bubble(message, true);
-  messageInput.value = "";
+  if (!retry && !preserveDraft) messageInput.value = "";
   byId("retry-chat").hidden = true;
   retryMessage = null;
   busyChat(true);
@@ -58,6 +88,7 @@ async function sendChat(message, retry = false) {
       throw new Error("추천 결과를 읽을 수 없습니다. 다시 시도해 주세요.");
     }
     setSession(response.session_id);
+    showPermission(response);
     bubble(response.answer);
     document.dispatchEvent(new CustomEvent("chat-result", { detail: response }));
     const failed = response.events.some((event) => event.event_type === "RUN_FAILED");
@@ -65,6 +96,7 @@ async function sendChat(message, retry = false) {
       : response.errors.length ? "일부 조회가 실패했습니다. 추천과 제외 후보의 상태를 확인해 주세요." : "", failed ? "error" : "warning");
     if (failed) retryMessage = message;
   } catch (error) {
+    showPermission({});
     notice("chat-status", error.message, "error");
     retryMessage = message;
   } finally {
@@ -84,9 +116,12 @@ messageInput.addEventListener("keydown", (event) => {
     chatForm.requestSubmit();
   }
 });
-byId("retry-chat").addEventListener("click", () => sendChat(retryMessage, true));
+byId("retry-chat").addEventListener("click", () => sendChat(retryMessage, { retry: true }));
+byId("allow-team").addEventListener("click", () => sendChat("다른 팀도 괜찮아.", { preserveDraft: true }));
+byId("revoke-team").addEventListener("click", () => sendChat("다른 팀은 안 돼.", { preserveDraft: true }));
 byId("new-chat").addEventListener("click", () => {
   setSession(null);
+  showPermission();
   retryMessage = null;
   byId("retry-chat").hidden = true;
   messageInput.value = "";
@@ -97,6 +132,7 @@ byId("new-chat").addEventListener("click", () => {
   messageInput.focus();
 });
 if (sessionId) bubble("이전 대화의 조건을 이어갈 수 있어요.");
+showPermission();
 
 function button(text, action) {
   const node = element("button", text);
@@ -302,7 +338,9 @@ document.addEventListener("chat-result", ({ detail: response }) => {
     conditionList("실제 적용된 조건", response.active_conditions));
   conditions.append(element("summary", "요청 조건 및 재계획 " + response.replan_count + "회"), grid);
   for (const step of response.relaxation_history) {
-    conditions.append(conditionList("재계획 " + step.attempt + "회차", step.changes, true));
+    const action = conditionList("재계획 " + step.attempt + "회차", step.changes, true);
+    action.className = "replan-step";
+    conditions.append(action);
   }
   results.append(conditions);
 
@@ -414,7 +452,7 @@ planForm.addEventListener("submit", async (event) => {
     const saved = plan.id ? await api("/api/plans/" + plan.id, "PATCH", changed)
       : await api("/api/plans", "POST", { ...plan, end_at: end, note });
     planDialog.close();
-    const confirmation = notice("plan-notice", plan.id ? "계획을 수정했습니다." : "계획을 저장했습니다.");
+    const confirmation = notice("plan-notice", plan.id ? "계획을 수정했습니다." : "계획을 저장했습니다.", "success");
     if (saved.overlap_warnings.length || saved.overlapping_plan_ids.length) {
       const warning = element("div", null, "notice warning");
       warning.append(element("strong", "일정 경고"));

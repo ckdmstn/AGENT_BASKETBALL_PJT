@@ -6,7 +6,7 @@ from langgraph.graph import END, START, StateGraph
 from backend.agent.events import EventBus
 from backend.agent.llm import JsonLLM
 from backend.agent.nodes import Nodes, next_alternative
-from backend.agent.permissions import verify_permissions
+from backend.agent.permissions import TEAM_CONFIRMATION_WARNING, verify_permissions
 from backend.agent.sessions import MemorySessions
 from backend.agent.state import AgentState, ChatRequest, ChatResponse, Conditions
 from backend.config import load_settings
@@ -41,8 +41,9 @@ class AgentRunner:
         started = perf_counter()
         with self.sessions.lock:
             previous = self.sessions.load(sid) or {}
+            checked, permission_warnings = verify_permissions(
+                request.message, previous.get('permissions', {}), follow_up=True)
             if previous:
-                checked, _ = verify_permissions(request.message, previous.get('permissions', {}), follow_up=True)
                 self.sessions.restrict_permissions(sid, checked)
                 previous = self.sessions.load(sid)
             bus = EventBus(sid, rid)
@@ -73,7 +74,13 @@ class AgentRunner:
                                     events=[event.model_dump(mode='json') for event in bus.events],
                                     elapsed_ms=round((perf_counter()-started)*1000, 2))
             response = ChatResponse.model_validate(redact_result(response.model_dump(mode='json'), self.settings))
+            stored_permissions = previous.get('permissions', {})
             if not result['fatal'] and result['intent'] in ('plan','follow_up'):
                 summary = '추천 ID: ' + ','.join(item.match_id for item in response.recommendations)
                 self.sessions.save(sid, response.conditions, summary, result['permissions'])
+                stored_permissions = result['permissions']
+            if stored_permissions.get('team'):
+                return response.model_copy(update={'team_permission': 'allowed'})
+            if TEAM_CONFIRMATION_WARNING in permission_warnings:
+                return response.model_copy(update={'team_permission': 'confirmation_required'})
             return response

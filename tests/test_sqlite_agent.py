@@ -59,6 +59,7 @@ def test_revocations_survive_new_runner_and_optional_llm_failure(tmp_path, stage
     failing = make_agent(path, [], llm=FailingLLM([{'intent': 'follow_up'}]))
     withdrawn = failing.run('방금 허용은 취소해', 'a')
     assert bool(withdrawn.errors) == (stage is not None)
+    assert withdrawn.team_permission == 'denied'
     restored = make_agent(path, [{'intent': 'follow_up'}])
     assert restored.sessions.load('a')['permissions'] == {'team': False, 'date_ranges': []}
     result = restored.run('다시 찾아 줘', 'a')
