@@ -87,8 +87,10 @@ class Nodes:
         previous = state['last_conditions'] if result.intent == 'follow_up' else {}
         patch = result.conditions.model_dump(mode='json')
         merged = {**previous, **{k: patch[k] for k in result.changed_fields}}
-        permission, warnings = verify_permissions(state['user_message'], state['last_permissions'], follow_up=result.intent == 'follow_up')
-        if not permission_only and (merged.get('fallback_teams_allowed', False) != permission['team'] or
+        choice = state.get('allow_other_teams')
+        permission, warnings = verify_permissions(state['user_message'], state['last_permissions'],
+                                                  follow_up=result.intent == 'follow_up', allow_other_teams=choice)
+        if not permission_only and ((choice is None and merged.get('fallback_teams_allowed', False) != permission['team']) or
                                     merged.get('alternative_date_ranges', []) != permission['date_ranges']):
             warnings.append('조건 완화 권한은 LLM 플래그가 아닌 검증된 명시적 허용을 기준으로 적용했습니다. 불명확한 허용은 확인이 필요합니다.')
         merged['fallback_teams_allowed'] = permission['team']

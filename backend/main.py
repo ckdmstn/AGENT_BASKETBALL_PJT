@@ -56,4 +56,4 @@ def health() -> HealthResponse:
 
 @app.post('/api/chat', response_model=ChatResponse)
 def chat(request: ChatRequest, agent: AgentRunner = Depends(get_agent_runner)) -> ChatResponse:
-    return agent.run(request.message, request.session_id)
+    return agent.run(request.message, request.session_id, allow_other_teams=request.allow_other_teams)
