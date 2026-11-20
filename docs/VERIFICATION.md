@@ -1,5 +1,12 @@
 # 작업 01 검증 기록
 
+## PR #8 최종 리뷰 — 날씨 표시 (2026-11-20)
+
+- 예보 미제공 시 강수확률·기온·강수량을 숨긴다. 제공된 예보는 대상 시각과 함께 표시하며, 서버가 강수 조건을 `unknown`으로 판정하면 해당 경기 시각의 조건을 확인하지 못했다고 별도로 안내한다. 강수확률 `null`과 강수량 `0 mm`를 구분한다.
+- Chromium 스모크에서 정상 예보 및 조건 충족, 값이 남아 있는 미제공 예보, 강수확률 `null`, 예보 대상 시각 불일치, 강수량 0과 누락을 확인했다. 기존 채팅·세션, 추천·제외 카드, 계획 CRUD·중복 경고, 로그, HTML 형태 메모 처리도 다시 통과했다.
+- 로컬 `node .verification/browser/smoke.cjs`는 임시 SQLite와 모의 LLM·Tool을 사용했다. 일부 날씨 경계값은 브라우저에서 API 응답을 바꿔 재현했다. 실제 외부 API·LLM과 Chromium 외 브라우저는 이번 리뷰에서 확인하지 않았다.
+- `.\.venv\Scripts\python.exe -m pytest -q` **147 passed in 5.31s**, `.\.venv\Scripts\python.exe -m pip check` **No broken requirements found**, `node --check frontend/app.js` 및 `git diff --check` 통과.
+
 ## Task 04 — Issue #7 웹 UI (2026-11-20)
 
 | 검증 | 결과 |

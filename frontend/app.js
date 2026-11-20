@@ -208,16 +208,23 @@ function gameCard(assessment, recommended, owner) {
   if (link) card.append(link);
 
   const weather = assessment.weather;
-  if (weather) {
+  if (weather?.available === true) {
     const pop = weather.precipitation_probability_pct;
     const temp = weather.temperature_c;
-    const weatherText = (weather.available ? "예보 제공" : "제공된 예보 없음")
-      + " · 강수확률 " + (pop == null ? "미확인" : pop + "%")
+    const amount = String(weather.precipitation_mm ?? "").trim();
+    const amountLabel = /^\d+(?:\.\d+)?$/.test(amount) ? amount + " mm" : amount;
+    const weatherText = "강수확률 " + (pop == null ? "미확인" : pop + "%")
       + " · 기온 " + (temp == null ? "미확인" : temp + " ℃")
-      + (weather.precipitation_mm ? " · 강수량 " + weather.precipitation_mm : "");
-    card.append(element("p", weatherText), element("small", "예보 대상 " + dateLabel(weather.forecast_at)));
+      + " · 강수량 " + (amountLabel || "미확인");
+    card.append(element("p", "예보 대상 " + dateLabel(weather.forecast_at), "muted"),
+      element("p", weatherText));
+  } else if (weather) {
+    card.append(element("p", "제공된 예보 없음", "muted"));
   } else {
     card.append(element("p", "날씨 예보 미확인", "muted"));
+  }
+  if (assessment.checks.weather?.status === "unknown") {
+    card.append(element("p", "해당 경기 시각의 강수 조건을 확인하지 못했습니다.", "muted"));
   }
 
   const checks = element("ul", null, "checks");
