@@ -1,5 +1,13 @@
 # 작업 01 검증 기록
 
+## Task 08 — 추천 채팅 요약과 접기·펼치기 (2026-11-20 KST)
+
+- PR #14가 포함된 `main`의 `8001299`를 기준으로 시작했다. 변경 전 pytest 174개, 변경 후 `.\.venv\Scripts\python.exe -m pytest -q` **174 passed in 7.79s**. `pip check`, `node --check frontend/app.js`, Git 공백 검사 통과.
+- 로컬 Chromium `node .verification/browser/cards-smoke.cjs`에서 추천 1건·2건·0건, 제외 후보만 있는 응답, 일부 Tool 오류·권한 확인 필요, 인사말·503 재시도·새 대화·후속 대화를 확인했다. 카드 데이터는 구조화된 추천을 사용하며 긴 근거를 채팅에 반복하지 않는다.
+- 1440px와 390px에서 카드 기본 접힘, 상세 열기·닫기와 여러 카드 독립 토글, 제외 후보 72개 그룹의 초기 높이 제한, 긴 이름과 HTML 형태 메모의 안전한 표시를 확인했다. Tab·Enter·Space 및 포커스, 주소·링크·날씨·조건 체크·계획 저장 및 중복 경고, 계획 CRUD와 로그를 확인했다.
+- 별도 `node .verification/browser/cards-permission.cjs`로 권한 선택, 입력 초안 보존, 실패 후 재시도, 새로고침과 서버 재시작도 재검증했다. 두 Chromium 테스트는 임시 SQLite와 Mock LLM·Tool을 사용했고, 대량 후보·일부 오류는 합성 응답으로 재현했다. 실제 외부 API·LLM과 다른 브라우저는 확인하지 않았다.
+- 두 해상도의 캡처는 `.verification/browser/cards-desktop.png`, `.verification/browser/cards-mobile.png`에 있다.
+
 ## Task 07 — 공식 경기장 주소 확대 (2026-11-20 KST)
 
 12월 1~14일 KBL 정규리그 일정에 나타난 10개 홈 구단과 9개 고유 경기장을 대상으로 조사했다. 카카오 검색에서 아래 이름·도로명주소와 유효한 좌표를 확인했고, 각 표의 등록 결과는 해당 조회 범위 기준이다.
