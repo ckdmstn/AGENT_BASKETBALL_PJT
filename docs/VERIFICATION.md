@@ -1,5 +1,20 @@
 # 작업 01 검증 기록
 
+## Task 12 — F3016 개인 계획 수정과 목록 반영 (2026-11-20 KST)
+
+- PR #22가 병합된 `3111874` 기준 191개 통과. 변경 후 `.\.venv\Scripts\python.exe -m pytest -q` **201 passed in 12.34s**. `pip check`, `node --check frontend/app.js`, Git 공백 검사 통과.
+- 임시 SQLite에서 다중 필드 PATCH 200, KST 날짜 변경과 `game_date` 갱신, 메모 null, 기존 종료 시각·식별자 보존, 유효하지 않은 입력 422 및 DB 값 보존, 시작 시각 변경의 충돌 재검사, 사용 중인 식별자로의 변경 409를 확인했다.
+- `node .verification/browser/plan-edit.cjs`에서 Chromium 1440px·390px의 신규/편집 폼과 자동 채움, Tab 이동, 메모 단일 PATCH, 핵심 필드 다중 PATCH 및 응답, 합성 422 후 재시도·입력 보존을 확인했다. 저장과 삭제 결과는 페이지를 새로고침하지 않아도 목록에 반영됐다. 추천·계획 409·로그와 `checkbox.cjs`의 권한·세션 스모크도 통과했다.
+- 브라우저는 임시 SQLite 및 Mock LLM·Tool을 사용했다. 실제 외부 API·LLM과 Chromium 외 브라우저는 검증하지 않았다.
+
+F3016 Mock Chromium 화면 증빙은 Git에서 추적한다.
+
+1. [수정 전 목록](screenshots/f3016-mock-01-list-before.png)
+2. [기존 값 편집 폼](screenshots/f3016-mock-02-edit.png)
+3. [수정 후 목록](screenshots/f3016-mock-03-list-updated.png)
+4. [재조회한 상세](screenshots/f3016-mock-04-detail-updated.png)
+5. [삭제 후 목록](screenshots/f3016-mock-05-list-after-delete.png)
+
 ## Task 11 — 채팅 체크박스 권한 (2026-11-20 KST)
 
 - PR #20 병합을 포함한 `main`의 `04bb953` 기준 179개 통과. 변경 후 `.\.venv\Scripts\python.exe -m pytest -q` **191 passed in 9.59s**. `pip check`, `node --check frontend/app.js`, Git 공백 검사 통과.
