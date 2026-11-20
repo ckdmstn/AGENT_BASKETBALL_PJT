@@ -32,11 +32,54 @@ function setSession(id) {
 }
 
 function bubble(message, fromUser = false) {
-  const list = byId("messages");
   const entry = element("p", null, fromUser ? "bubble user" : "bubble");
   entry.append(element("strong", fromUser ? "나" : "KBL GO"), document.createTextNode("\n" + message));
+  appendMessage(entry);
+}
+
+function appendMessage(entry) {
+  const list = byId("messages");
   list.append(entry);
   list.scrollTop = list.scrollHeight;
+}
+
+function hasLookupIssue(response) {
+  return response.errors.some(({ code, tool_name }) => code !== "NO_RESULT" || tool_name !== "search_kbl_games");
+}
+
+function resultMessage(response) {
+  if (response.events.some(({ event_type }) => event_type === "RUN_FAILED")) return "추천을 완료하지 못했습니다.";
+  if (hasLookupIssue(response)) return "조회 실패로 추천 경기를 확인하지 못했습니다.";
+  if (response.excluded.length || response.events.some(({ event_type }) => event_type === "TOOL_RESPONDED")) {
+    return "조건에 맞는 추천 경기가 없습니다.";
+  }
+  return null;
+}
+
+function assistantMessage(response) {
+  const count = response.recommendations.length;
+  if (!count) {
+    const message = resultMessage(response);
+    const hint = response.excluded.length ? " 오른쪽 제외 후보에서 사유를 확인할 수 있습니다." : "";
+    bubble(message ? message + hint : response.answer);
+    return;
+  }
+
+  const entry = element("div", null, "bubble chat-summary");
+  entry.append(element("strong", "추천 경기 " + count + "건"));
+  const list = element("ul");
+  for (const assessment of response.recommendations) {
+    const info = match(assessment);
+    const card = element("li", null, "chat-game");
+    card.append(element("strong", matchTitle(info)), element("span", dateLabel(info.start_at)),
+      element("span", info.venue_name || "경기장 미확인"));
+    list.append(card);
+  }
+  entry.append(list);
+  if (response.excluded.some((item) => item.status === "unknown")) {
+    entry.append(element("p", "일부 후보는 정보가 미확인입니다. 제외 후보에서 확인할 수 있습니다.", "muted"));
+  }
+  appendMessage(entry);
 }
 
 function busyChat(busy) {
@@ -89,11 +132,11 @@ async function sendChat(message, { retry = false, preserveDraft = false } = {}) 
     }
     setSession(response.session_id);
     showPermission(response);
-    bubble(response.answer);
+    assistantMessage(response);
     document.dispatchEvent(new CustomEvent("chat-result", { detail: response }));
     const failed = response.events.some((event) => event.event_type === "RUN_FAILED");
     notice("chat-status", failed ? "추천 요청을 완료하지 못했습니다. 다시 시도할 수 있습니다."
-      : response.errors.length ? "일부 조회가 실패했습니다. 추천과 제외 후보의 상태를 확인해 주세요." : "", failed ? "error" : "warning");
+      : hasLookupIssue(response) ? "일부 조회가 실패했습니다. 추천과 제외 후보의 상태를 확인해 주세요." : "", failed ? "error" : "warning");
     if (failed) retryMessage = message;
   } catch (error) {
     showPermission({});
@@ -234,14 +277,19 @@ function matchTitle(game) {
 
 function gameCard(assessment, recommended, owner) {
   const info = match(assessment);
-  const card = element("article", null, recommended ? "entry game" : "entry");
-  const heading = element("div", null, "section-head");
-  heading.append(element("h3", matchTitle(info)), statusBadge(assessment.status));
-  card.append(heading, element("p", dateLabel(info.start_at)),
-    element("p", info.venue_name || "경기장 미확인"),
-    element("p", info.venue_address || "검증된 주소 미확인", "muted"));
+  const card = element("details", null, recommended ? "entry game-card game" : "entry game-card");
+  const summary = element("summary", null, "game-summary");
+  const matchInfo = element("span", null, "game-summary-info");
+  matchInfo.append(element("strong", matchTitle(info)), element("span", dateLabel(info.start_at)),
+    element("span", info.venue_name || "경기장 미확인"));
+  const indicator = element("span", null, "game-toggle");
+  indicator.append(element("span", "상세 보기", "game-open"), element("span", "상세 닫기", "game-close"));
+  summary.append(matchInfo, statusBadge(assessment.status), indicator);
+  const detail = element("div", null, "game-details");
+  detail.append(element("p", info.venue_address || "검증된 주소 미확인", "muted"));
+  card.append(summary, detail);
   const link = assessment.arena?.verified_kbl_arena && safeLink(assessment.arena.place_url);
-  if (link) card.append(link);
+  if (link) detail.append(link);
 
   const weather = assessment.weather;
   if (weather?.available === true) {
@@ -252,15 +300,15 @@ function gameCard(assessment, recommended, owner) {
     const weatherText = "강수확률 " + (pop == null ? "미확인" : pop + "%")
       + " · 기온 " + (temp == null ? "미확인" : temp + " ℃")
       + " · 강수량 " + (amountLabel || "미확인");
-    card.append(element("p", "예보 대상 " + dateLabel(weather.forecast_at), "muted"),
+    detail.append(element("p", "예보 대상 " + dateLabel(weather.forecast_at), "muted"),
       element("p", weatherText));
   } else if (weather) {
-    card.append(element("p", "제공된 예보 없음", "muted"));
+    detail.append(element("p", "제공된 예보 없음", "muted"));
   } else {
-    card.append(element("p", "날씨 예보 미확인", "muted"));
+    detail.append(element("p", "날씨 예보 미확인", "muted"));
   }
   if (assessment.checks.weather?.status === "unknown") {
-    card.append(element("p", "해당 경기 시각의 강수 조건을 확인하지 못했습니다.", "muted"));
+    detail.append(element("p", "해당 경기 시각의 강수 조건을 확인하지 못했습니다.", "muted"));
   }
 
   const checks = element("ul", null, "checks");
@@ -270,7 +318,7 @@ function gameCard(assessment, recommended, owner) {
     checks.append(item);
   }
   if (checks.children.length) {
-    card.append(element("h4", recommended ? "추천 근거" : "제외 사유"), checks);
+    detail.append(element("h4", recommended ? "추천 근거" : "제외 사유"), checks);
   }
 
   if (recommended) {
@@ -278,8 +326,8 @@ function gameCard(assessment, recommended, owner) {
       detail: { ...info, session_id: owner },
     })));
     save.disabled = !info.match_id || !info.home_team || !info.away_team || !info.venue_name || !info.start_at;
-    card.append(save);
-    if (save.disabled) card.append(element("p", "필수 경기 정보가 확인되면 저장할 수 있습니다.", "muted"));
+    detail.append(save);
+    if (save.disabled) detail.append(element("p", "필수 경기 정보가 확인되면 저장할 수 있습니다.", "muted"));
   }
   return card;
 }
@@ -319,12 +367,7 @@ document.addEventListener("chat-result", ({ detail: response }) => {
     return;
   }
   if (!response.recommendations.length) {
-    const unavailable = response.events.some((event) => event.event_type === "RUN_FAILED");
-    const lookedUp = response.events.some((event) => event.event_type === "TOOL_RESPONDED");
-    const emptyMessage = unavailable ? "추천을 완료하지 못했습니다."
-      : response.errors.some((error) => error.code !== "NO_RESULT") ? "조회 실패로 추천 경기를 확인하지 못했습니다."
-      : lookedUp ? "조건에 맞는 추천 경기가 없습니다." : "이번 대화에서 경기 조회를 실행하지 않았습니다.";
-    results.append(element("p", emptyMessage, "empty"));
+    results.append(element("p", resultMessage(response) ?? "이번 대화에서 경기 조회를 실행하지 않았습니다.", "empty"));
   }
   for (const recommendation of response.recommendations) {
     results.append(gameCard(recommendation, true, response.session_id));
@@ -345,7 +388,7 @@ document.addEventListener("chat-result", ({ detail: response }) => {
   results.append(conditions);
 
   if (response.excluded.length) {
-    const excluded = element("details");
+    const excluded = element("details", null, "excluded-games");
     excluded.append(element("summary", "제외 후보 " + response.excluded.length + "경기"));
     for (const assessment of response.excluded) excluded.append(gameCard(assessment, false));
     results.append(excluded);
