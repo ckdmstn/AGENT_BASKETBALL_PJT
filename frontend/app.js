@@ -306,3 +306,136 @@ document.addEventListener("chat-result", ({ detail: response }) => {
   }
 });
 
+const planDialog = byId("plan-dialog");
+const planForm = byId("plan-form");
+const planEnd = byId("end-at");
+const planNote = byId("plan-note");
+let selectedPlan = null;
+let planBusy = false;
+let planLoad = 0;
+
+function kstInput(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "";
+  return new Date(date.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 16);
+}
+
+function openPlan(plan) {
+  if (planDialog.open) return;
+  selectedPlan = plan;
+  byId("plan-title").textContent = plan.id ? "저장한 계획 상세" : "직관 계획 저장";
+  const summary = byId("plan-summary");
+  summary.replaceChildren(element("h3", matchTitle(plan)),
+    element("p", dateLabel(plan.start_at) + " · " + plan.venue_name));
+  if (plan.venue_address) summary.append(element("p", plan.venue_address));
+  if (plan.id) summary.append(element("small", "저장 " + dateLabel(plan.created_at) + " · 수정 " + dateLabel(plan.updated_at)));
+  planEnd.value = kstInput(plan.end_at);
+  planNote.value = plan.note ?? "";
+  byId("delete-plan").hidden = !plan.id;
+  notice("plan-error", "");
+  planDialog.showModal();
+}
+
+function setPlanBusy(value) {
+  planBusy = value;
+  for (const id of ["close-plan", "delete-plan", "save-plan", "end-at", "plan-note"]) byId(id).disabled = value;
+}
+
+async function loadPlans() {
+  const request = ++planLoad;
+  const list = byId("plan-list");
+  if (!list.children.length) list.append(element("p", "계획을 불러오는 중…", "muted"));
+  try {
+    const plans = await api("/api/plans");
+    if (request !== planLoad) return;
+    list.replaceChildren();
+    if (!plans.length) list.append(element("p", "아직 저장한 직관 계획이 없습니다.", "empty"));
+    for (const plan of plans) {
+      const entry = element("article", null, "entry");
+      entry.append(element("h3", matchTitle(plan)), element("p", dateLabel(plan.start_at) + " · " + plan.venue_name));
+      if (plan.note) entry.append(element("p", plan.note, "muted"));
+      entry.append(button("계획 상세", async (trigger) => {
+        trigger.disabled = true;
+        notice("plan-notice", "");
+        try {
+          openPlan(await api("/api/plans/" + plan.id));
+        } catch (error) {
+          notice("plan-notice", error.message, "error");
+        } finally {
+          trigger.disabled = false;
+        }
+      }));
+      list.append(entry);
+    }
+  } catch (error) {
+    if (request === planLoad) {
+      const errorMessage = element("p", error.message, "notice error");
+      list.replaceChildren(errorMessage);
+    }
+  }
+}
+
+document.addEventListener("plan-from-match", ({ detail }) => openPlan(detail));
+byId("refresh-plans").addEventListener("click", loadPlans);
+byId("close-plan").addEventListener("click", () => planDialog.close());
+planDialog.addEventListener("cancel", (event) => {
+  if (planBusy) event.preventDefault();
+});
+
+planForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (planBusy || !selectedPlan) return;
+  const plan = selectedPlan;
+  const changed = {};
+  const end = planEnd.value ? planEnd.value + ":00+09:00" : null;
+  const note = planNote.value.trim() || null;
+  if (planEnd.value !== kstInput(plan.end_at)) changed.end_at = end;
+  if (planNote.value !== (plan.note ?? "")) changed.note = note;
+  if (plan.id && !Object.keys(changed).length) {
+    notice("plan-error", "변경된 항목이 없습니다.");
+    return;
+  }
+  if (end && Date.parse(end) <= Date.parse(plan.start_at)) {
+    notice("plan-error", "종료 시각은 경기 시작보다 늦어야 합니다.", "error");
+    return;
+  }
+  setPlanBusy(true);
+  try {
+    const saved = plan.id ? await api("/api/plans/" + plan.id, "PATCH", changed)
+      : await api("/api/plans", "POST", { ...plan, end_at: end, note });
+    planDialog.close();
+    const confirmation = notice("plan-notice", plan.id ? "계획을 수정했습니다." : "계획을 저장했습니다.");
+    if (saved.overlap_warnings.length || saved.overlapping_plan_ids.length) {
+      const warning = element("div", null, "notice warning");
+      warning.append(element("strong", "일정 경고"));
+      for (const message of saved.overlap_warnings) warning.append(element("p", message));
+      if (saved.overlapping_plan_ids.length) {
+        warning.append(element("p", "겹치는 계획 ID " + saved.overlapping_plan_ids.join(", ")));
+      }
+      confirmation.append(warning);
+    }
+    await loadPlans();
+  } catch (error) {
+    notice("plan-error", error.message, "error");
+  } finally {
+    setPlanBusy(false);
+  }
+});
+
+byId("delete-plan").addEventListener("click", async () => {
+  if (planBusy || !selectedPlan?.id || !confirm("이 직관 계획을 삭제할까요?")) return;
+  setPlanBusy(true);
+  try {
+    await api("/api/plans/" + selectedPlan.id, "DELETE");
+    planDialog.close();
+    notice("plan-notice", "계획을 삭제했습니다.");
+    await loadPlans();
+  } catch (error) {
+    notice("plan-error", error.message, "error");
+  } finally {
+    setPlanBusy(false);
+  }
+});
+loadPlans();
+
