@@ -5,15 +5,29 @@ from backend.agent.state import Assessment, ConditionCheck, Conditions
 from backend.config import KST
 from backend.schemas import Arena, GameCandidate, GameDetail, Weather
 
-# Official references checked 2026-11-19; only these aliases have address evidence.
+# Official sources support facility names; KBL and Kakao labels were cross-checked.
 VENUES = [
-    ({'잠실학생체육관', '서울특별시교육청학생체육관'}, '송파구올림픽로25',
+    ({'잠실학생체육관', '서울특별시교육청학생체육관'}, '서울 송파구 올림픽로 25',
      'https://ssg.sen.go.kr/fus/MI000000000000000366/html/cont0010v.do'),
-    ({'안양정관장아레나'}, '안양시동안구평촌대로389',
+    ({'안양정관장아레나'}, '경기 안양시 동안구 평촌대로 389',
      'https://www.kgc.co.kr/intro/kgc-introduction/affiliate.do'),
-    ({'수원KT소닉붐아레나', 'KT소닉붐아레나', '서수원칠보체육관'}, '수원시권선구서수원로577번길171',
+    ({'수원KT소닉붐아레나', 'KT소닉붐아레나', '서수원칠보체육관'}, '경기 수원시 권선구 서수원로577번길 171',
      'https://www.kbl.or.kr/upfiles/ebook/2425_media_guidebook.pdf'),
+    ({'창원체육관', '창원스포츠파크 창원체육관'}, '경상남도 창원시 성산구 원이대로 450',
+     'https://www.cwsisul.or.kr/_chsports/_sub01/sub01_02.html'),
+    ({'고양소노아레나', '고양체육관'}, '경기 고양시 일산서구 중앙로 1601',
+     'https://skygunners.kbl.or.kr/team/stadium'),
+    ({'부산사직체육관', '부산 사직실내체육관', '부산사직종합운동장 실내체육관'}, '부산 동래구 사직로 55-32',
+     'https://www.busan.go.kr/sports/main/3?action=view&no=127'),
+    ({'대구체육관', '대구실내체육관'}, '대구 북구 대구체육관로 39',
+     'https://www.kbl.or.kr/upfiles/ebook/2425_media_guidebook.pdf'),
+    ({'울산동천체육관', '동천체육관'}, '울산 중구 염포로 85',
+     'https://phoebus.kbl.or.kr/team/stadium'),
+    ({'원주DB프로미아레나', '원주종합체육관'}, '강원특별자치도 원주시 서원대로 281',
+     'https://cms.wfmc.kr/web/lay1/S1T156C179/contents.do'),
 ]
+# The KBL label alone returned no Kakao result for this venue.
+ARENA_SEARCH_NAMES = {'부산사직체육관': '부산 사직실내체육관'}
 
 
 def normalized(value):
@@ -51,16 +65,41 @@ def region_match(requested: str, address: str) -> bool | None:
     return requested in administrative if administrative else None
 
 
-def verified_arena(venue_name: str, candidates: list[dict]) -> Arena | None:
-    for aliases, address, _source in VENUES:
-        names = {normalized(n) for n in aliases}
-        if normalized(venue_name) not in names:
-            continue
-        matches = [Arena.model_validate(c) for c in candidates
-                   if normalized(c.get('name')) in names and normalized(address) in normalized(c.get('road_address'))]
-        if len(matches) == 1:
-            return matches[0].model_copy(update={'verified_kbl_arena': True})
+def road_address_key(value: str | None) -> tuple[str, str] | None:
+    parts = (value or '').split(maxsplit=1)
+    if len(parts) == 2 and parts[0] in REGION_ALIASES:
+        return REGION_ALIASES[parts[0]], normalized(parts[1])
     return None
+
+
+def verified_arena(venue_name: str, candidates: list[dict], error_code: str | None = None) -> tuple[Arena | None, str]:
+    for aliases, address, _source in VENUES:
+        names = {normalized(name) for name in aliases}
+        if normalized(venue_name) in names:
+            break
+    else:
+        return None, '아직 공식 주소 검증 대상에 등록되지 않은 경기장입니다.'
+    if error_code and error_code != 'NO_RESULT':
+        return None, '장소 조회에 실패하여 경기장 주소를 확인하지 못했습니다.'
+    if not candidates:
+        return None, '장소 검색 결과가 없어 경기장 위치를 확인하지 못했습니다.'
+    named = [candidate for candidate in candidates if normalized(candidate.get('name')) in names]
+    if not named:
+        return None, '검색된 장소명이 공식 경기장 이름과 일치하지 않습니다.'
+    official = road_address_key(address)
+    matches = [candidate for candidate in named
+               if official is not None and road_address_key(candidate.get('road_address')) == official]
+    if not matches:
+        if any(not candidate.get('road_address') for candidate in named):
+            return None, '검색된 장소의 도로명주소가 누락되어 공식 주소를 확인하지 못했습니다.'
+        return None, '검색된 장소가 공식 경기장 주소와 일치하지 않습니다.'
+    if len(matches) != 1 or any(not candidate.get('road_address') for candidate in named):
+        return None, '일치 가능성이 있는 장소가 여러 곳이어서 확정할 수 없습니다.'
+    selected = Arena.model_validate(matches[0])
+    if (selected.lat is None or selected.lon is None
+            or not (30 <= selected.lat <= 44 and 120 <= selected.lon <= 133)):
+        return None, '검색된 장소의 유효한 좌표를 확인하지 못했습니다.'
+    return selected.model_copy(update={'verified_kbl_arena': True}), '공식 경기장 주소 검증 완료'
 
 
 def requested_weather(c: Conditions) -> bool:
@@ -77,7 +116,7 @@ def team_matches(team: str, game: dict) -> bool:
 
 
 def assess(game: dict, detail: dict | None, arena: dict | None, weather: dict | None,
-           c: Conditions) -> Assessment:
+           c: Conditions, *, arena_reason: str | None = None) -> Assessment:
     g = GameCandidate.model_validate(game)
     d = GameDetail.model_validate(detail) if detail else None
     a = Arena.model_validate(arena) if arena else None
@@ -106,9 +145,9 @@ def assess(game: dict, detail: dict | None, arena: dict | None, weather: dict | 
     if c.preferred_team:
         put('team', team_matches(c.preferred_team, game), f'선호팀={c.preferred_team}; 실제={g.home_team}/{g.away_team}')
     put('venue', True if a and a.verified_kbl_arena else None,
-        (a.road_address or a.address or '구장 주소 미확인') if a else '공식 이름·주소와 일치하는 장소 미확인')
+        arena_reason or ((a.road_address or a.address or '구장 주소 미확인') if a else '공식 경기장 주소를 확인하지 못했습니다.'))
     if c.region:
-        address = (a.road_address or a.address or '') if a else ''
+        address = (a.road_address or '') if a and a.verified_kbl_arena else ''
         put('region', region_match(c.region, address),
             f'요청 지역={c.region}; 확인 주소={address or "미확인"}')
     if requested_weather(c):

@@ -225,14 +225,9 @@ def test_matching_candidate_after_twelve_other_games_is_not_discarded():
     ('수원','경기도 서수원로577번길 171','unknown'),
 ])
 def test_region_administrative_aliases_and_road_name_isolation(requested,address,expected):
-    from backend.agent.evaluation import assess
-    from backend.agent.state import Conditions
-    g=game()
-    detail=GameDetail(match_id=g.match_id,start_at=g.start_at,home_team=g.home_team,away_team=g.away_team,venue_name=g.venue_name)
-    arena=Arena(name='구장 후보',road_address=address,verified_kbl_arena=False)
-    r=assess(g.model_dump(mode='json'),detail.model_dump(mode='json'),arena.model_dump(mode='json'),None,Conditions(region=requested))
-    assert r.checks['region'].status == expected
-    assert r.checks['venue'].status == 'unknown'  # Region does not certify a venue.
+    from backend.agent.evaluation import region_match
+
+    assert region_match(requested, address or '') is {'met': True, 'unmet': False, 'unknown': None}[expected]
 
 
 def test_llm_decision_reasons_are_recorded_in_order():

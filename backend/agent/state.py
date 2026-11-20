@@ -122,6 +122,7 @@ class AgentState(TypedDict, total=False):
     games: list[dict]
     details: dict
     arena_info: dict
+    arena_reasons: dict[str, str]
     weather_info: dict
     eligible: list[dict]
     excluded: list[dict]
