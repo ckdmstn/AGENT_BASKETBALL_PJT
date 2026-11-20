@@ -156,7 +156,7 @@ const fieldLabels = new Map(Object.entries({
   date_range: "날짜", start_after: "이후 시작", region: "지역", preferred_team: "선호 팀",
   weather_preference: "날씨 선호", max_precipitation_probability_pct: "최대 강수확률",
   fallback_teams_allowed: "다른 팀 허용", alternative_date_ranges: "대체 날짜",
-  date: "날짜", time: "시각", team: "팀", weather: "날씨", detail: "경기 상세", league: "대회", arena: "경기장",
+  date: "날짜", time: "시각", team: "팀", weather: "날씨", detail: "경기 상세", competition: "대회", venue: "경기장",
 }));
 const statuses = new Map([["met", "조건 충족"], ["unmet", "조건 불충족"], ["unknown", "정보 미확인"]]);
 const results = byId("results");
@@ -322,7 +322,7 @@ function kstInput(value) {
 }
 
 function openPlan(plan) {
-  if (planDialog.open) return;
+  if (planDialog.open || planBusy) return;
   selectedPlan = plan;
   byId("plan-title").textContent = plan.id ? "저장한 계획 상세" : "직관 계획 저장";
   const summary = byId("plan-summary");
@@ -391,12 +391,13 @@ planForm.addEventListener("submit", async (event) => {
   const end = planEnd.value ? planEnd.value + ":00+09:00" : null;
   const note = planNote.value.trim() || null;
   if (planEnd.value !== kstInput(plan.end_at)) changed.end_at = end;
-  if (planNote.value !== (plan.note ?? "")) changed.note = note;
+  if (planNote.value !== (plan.note ?? "") && note !== (plan.note ?? null)) changed.note = note;
   if (plan.id && !Object.keys(changed).length) {
     notice("plan-error", "변경된 항목이 없습니다.");
     return;
   }
-  if (end && Date.parse(end) <= Date.parse(plan.start_at)) {
+  const effectiveEnd = Object.hasOwn(changed, "end_at") ? end : (plan.end_at ?? end);
+  if (effectiveEnd && Date.parse(effectiveEnd) <= Date.parse(plan.start_at)) {
     notice("plan-error", "종료 시각은 경기 시작보다 늦어야 합니다.", "error");
     return;
   }
