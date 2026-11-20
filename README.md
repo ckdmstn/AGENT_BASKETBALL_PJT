@@ -1,7 +1,7 @@
 # KBL GO
 
 한국프로농구 AI 직관 플래너. Issue #1의 외부 Tool에 Issue #3의 LangGraph Main Agent와 채팅 API를 연결했다.
-설계 기준은 [PROJECT_PLAN](docs/PROJECT_PLAN.md)이다. SQLite 직관 계획 관리·대화 세션 저장·실행 로그 조회를 지원한다. UI와 RAG는 후속 작업이다.
+설계 기준은 [PROJECT_PLAN](docs/PROJECT_PLAN.md)이다. 웹에서 AI 직관 추천을 받고 SQLite에 계획을 저장하거나 Agent 실행 기록을 확인할 수 있다. RAG는 후속 작업이다.
 
 ## Windows / PowerShell 실행
 
@@ -12,6 +12,7 @@ python -m venv .venv
 .venv\Scripts\python -m uvicorn backend.main:app --reload
 ```
 
+- 웹 UI: http://127.0.0.1:8000/
 - 상태: http://127.0.0.1:8000/api/health
 - Swagger: http://127.0.0.1:8000/docs
 - 외부 API Tool은 아직 HTTP 라우트로 공개하지 않았다. Python의 `invoke(name, arguments)`로 호출한다.
@@ -19,7 +20,15 @@ python -m venv .venv
 - 현재 프로젝트는 `.env`를 직접 사용한다. 기존 파일은 덮어쓰지 않는다. 추가 설정 이름은 `KBL_BASE_URL`, `KBL_TEAM_CODE`, `API_TIMEOUT_SECONDS`이며 기본값은 각각 `https://api.kbl.or.kr`, `XX`, `15`다.
 - 자연어 채팅은 `OPENAI_API_KEY`, `OPENAI_BASE_URL`(HTTPS OpenAI 호환 `/v1` 등 API 루트), `OPENAI_MODEL` 설정이 필요하다. 현재 GMS의 `gpt-6-sol`로 실제 JSON 모드 호출을 확인했다. URL 끝에 `/chat/completions`는 붙이지 않는다. 기존 프로세스 환경변수가 로컬 파일보다 우선하며 설정 변경 후 서버를 재시작한다.
 
-## 채팅 실행
+## 웹 UI 사용
+
+1. **직관 추천**에서 날짜, 지역, 팀 등을 자연어로 입력한다. 예를 들어 `2026년 11월 19일 오후 2시 이후 수원에서 서울 SK 경기를 추천해 줘`처럼 입력한다. Enter는 전송, Shift+Enter는 줄바꿈이다. 응답에 따라 추천·제외 후보와 검증 근거, 원조건과 적용 조건을 확인할 수 있다.
+2. **계획 저장**으로 확인된 경기 정보를 확인하고 선택적으로 종료 예정 시각과 메모를 입력한다. **저장한 계획**의 상세에서 종료 예정 시각과 메모를 수정하거나 계획을 삭제할 수 있다. 중복 일정이 있으면 저장 결과와 별도로 경고를 표시한다.
+3. **Agent 실행 기록**에서 세션별 실행 상세를 열면 분석, Tool 호출, 캐시 재사용, 조건 조정과 완료·실패 상태를 확인할 수 있다. 로그를 삭제해도 계획과 대화 조건은 유지된다.
+
+브라우저는 현재 `session_id`만 같은 origin의 `localStorage`에 저장한다. 새로고침 뒤에는 기존 조건을 이어갈 수 있으며 화면의 메시지 내역은 새로 시작한다. **새 대화**는 브라우저의 세션 선택을 초기화하고 다음 요청에서 새 ID를 받는다. 세션 ID는 인증 수단이 아니며 같은 브라우저 프로필과 origin을 사용하는 사용자가 접근할 수 있다. API에 별도 인증이 없으므로 루프백 주소에서 로컬 단일 사용자용으로 실행한다.
+
+## Swagger에서 채팅 실행
 
 Swagger에서 `POST /api/chat`을 열고 다음 요청을 실행한다. 실제 날짜에 경기가 없으면 추천이 없을 수 있다.
 

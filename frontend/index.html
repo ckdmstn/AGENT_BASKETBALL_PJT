@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="AI 한국프로농구 직관 추천과 일정 관리">
+  <title>KBL GO · 직관 플래너</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <script type="module" src="/static/app.js"></script>
+</head>
+<body>
+  <header class="top">
+    <div class="shell bar">
+      <a href="#chat" class="brand" aria-label="KBL GO 추천 채팅">KBL <strong>GO</strong></a>
+      <nav aria-label="주 메뉴">
+        <a href="#chat">직관 추천</a>
+        <a href="#plans">저장한 계획</a>
+        <a href="#logs">실행 기록</a>
+      </nav>
+    </div>
+  </header>
+  <main class="shell">
+    <section class="hero" aria-labelledby="title">
+      <div class="hero-copy">
+        <p class="eyebrow">KBL 직관 플래너</p>
+        <h1 id="title">다음 직관,<br>어디로 갈까요?</h1>
+        <p>날짜와 응원할 팀을 알려주세요. 조건에 맞는 경기를 찾아드려요.</p>
+      </div>
+      <div class="court" aria-hidden="true"><i></i><b></b><span></span></div>
+    </section>
+    <div class="workspace">
+      <section id="chat" class="panel">
+        <div class="section-head"><h2>추천 채팅</h2><button type="button" id="new-chat">새 대화</button></div>
+        <div id="messages" class="messages" role="log" aria-label="대화">
+          <p class="bubble">원하는 날짜, 지역, 팀을 알려주세요.</p>
+        </div>
+        <form id="chat-form">
+          <label for="message">메시지</label>
+          <textarea id="message" rows="3" maxlength="4000" required placeholder="이번 주말 서울에서 SK 경기 추천해 줘"></textarea>
+          <div class="section-head composer"><small>Enter 전송 · Shift+Enter 줄바꿈</small><button class="primary" id="send">보내기</button></div>
+        </form>
+        <p id="chat-status" role="status" class="notice" hidden></p>
+        <button type="button" id="retry-chat" hidden>다시 보내기</button>
+      </section>
+      <section id="recommendations" class="panel" aria-labelledby="results-title">
+        <div class="section-head"><h2 id="results-title">추천 경기</h2><span id="result-count" class="count"></span></div>
+        <div id="results" aria-live="polite"><p class="empty">채팅을 보내면 추천 경기와 조건 검증 결과가 여기에 표시됩니다.</p></div>
+      </section>
+    </div>
+    <section id="plans" class="panel lower">
+      <div class="section-head"><h2>저장한 계획</h2><button type="button" id="refresh-plans">새로고침</button></div>
+      <div id="plan-list"></div>
+      <div id="plan-notice" role="status" class="notice" hidden></div>
+    </section>
+    <section id="logs" class="panel lower">
+      <div class="section-head"><h2>Agent 실행 기록</h2><button type="button" id="refresh-logs">새로고침</button></div>
+      <p class="muted">저장에 실패한 이벤트는 기록에서 빠질 수 있습니다.</p>
+      <div id="log-list"></div>
+      <p id="log-status" role="status" class="notice" hidden></p>
+      <div id="log-detail"></div>
+    </section>
+  </main>
+  <dialog id="plan-dialog" aria-labelledby="plan-title">
+    <form id="plan-form">
+      <div class="section-head"><h2 id="plan-title">직관 계획</h2><button type="button" id="close-plan">닫기</button></div>
+      <div id="plan-summary"></div>
+      <label for="end-at">종료 예정 시각 (한국시간)</label>
+      <input id="end-at" type="datetime-local">
+      <small>종료 시각을 비워 두면 중복 검사에 제한이 있습니다.</small>
+      <label for="plan-note">메모</label>
+      <textarea id="plan-note" rows="3"></textarea>
+      <p id="plan-error" role="alert" class="notice" hidden></p>
+      <div class="actions"><button type="button" id="delete-plan" class="danger" hidden>삭제</button><button class="primary" id="save-plan">저장</button></div>
+    </form>
+  </dialog>
+</body>
+</html>

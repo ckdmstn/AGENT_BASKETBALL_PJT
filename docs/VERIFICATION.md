@@ -1,5 +1,30 @@
 # 작업 01 검증 기록
 
+## PR #8 최종 리뷰 — 날씨 표시 (2026-11-20)
+
+- 예보 미제공 시 강수확률·기온·강수량을 숨긴다. 제공된 예보는 대상 시각과 함께 표시하며, 서버가 강수 조건을 `unknown`으로 판정하면 해당 경기 시각의 조건을 확인하지 못했다고 별도로 안내한다. 강수확률 `null`과 강수량 `0 mm`를 구분한다.
+- Chromium 스모크에서 정상 예보 및 조건 충족, 값이 남아 있는 미제공 예보, 강수확률 `null`, 예보 대상 시각 불일치, 강수량 0과 누락을 확인했다. 기존 채팅·세션, 추천·제외 카드, 계획 CRUD·중복 경고, 로그, HTML 형태 메모 처리도 다시 통과했다.
+- 로컬 `node .verification/browser/smoke.cjs`는 임시 SQLite와 모의 LLM·Tool을 사용했다. 일부 날씨 경계값은 브라우저에서 API 응답을 바꿔 재현했다. 실제 외부 API·LLM과 Chromium 외 브라우저는 이번 리뷰에서 확인하지 않았다.
+- `.\.venv\Scripts\python.exe -m pytest -q` **147 passed in 5.31s**, `.\.venv\Scripts\python.exe -m pip check` **No broken requirements found**, `node --check frontend/app.js` 및 `git diff --check` 통과.
+
+## Task 04 — Issue #7 웹 UI (2026-11-20)
+
+| 검증 | 결과 |
+| --- | --- |
+| 변경 전 `.\.venv\Scripts\python.exe -m pytest -q` | 143 passed |
+| 변경 후 동일 명령 | **147 passed in 7.21s**. 기존 143개와 신규 정적 경로 테스트 4개 |
+| `.\.venv\Scripts\python.exe -m pip check` | No broken requirements found |
+| `node --check frontend/app.js` 및 `git diff --check` | 통과 |
+| `node .verification/browser/smoke.cjs` | Playwright 1.52 및 Chromium Headless Shell에서 통과 |
+
+- 브라우저는 로컬 Uvicorn의 실제 FastAPI 경로와 임시 SQLite를 사용했다. Agent의 LLM과 외부 Tool 응답만 모의 처리했다. 실제 LLM과 KBL·카카오·기상청 API는 재호출하지 않았다.
+- Enter 전송과 Shift+Enter 줄바꿈, 로딩 중 전송 잠금, 503 안내 및 재시도, 세션 ID 새로고침 유지와 새 대화 분리를 확인했다.
+- 추천·제외 카드와 충족·불충족·미확인 상태, 강수확률 null, 원조건과 활성조건, 재계획에서 해제된 선호 팀 표시를 확인했다.
+- 계획 저장·목록·상세·수정·삭제, 수정 시 메모 필드만 전송, 중복 저장과 경고, HTML 형태 메모의 텍스트 렌더링을 확인했다. 세션별 로그 상세의 캐시 재사용·재계획 설명과 로그 삭제 뒤 계획·다른 세션 로그의 보존을 확인했다.
+- 데스크톱 1440px 및 모바일 390px 레이아웃을 브라우저에서 확인했다. 로컬 화면 캡처는 Git 제외 경로 `.verification/browser/desktop.png` 및 `.verification/browser/mobile.png`에 있다. Edge 자동 실행이 종료되어 브라우저 검증은 Chromium에서 수행했다. 기타 브라우저 및 실제 모바일 기기는 별도로 확인하지 않았다.
+
+시연은 웹 UI에서 날짜와 팀을 입력한 뒤 추천 근거를 확인하고, 같은 경기를 종료 시각을 지정해 두 번 저장해 중복 경고를 확인하는 순서로 진행한다. 이후 저장한 계획의 메모를 수정하고 실행 로그를 열어 처리 과정과 재계획 내역을 확인할 수 있다. 실제 경기 조회 결과는 입력 시점과 외부 서비스 응답에 따라 달라진다.
+
 ## PR #6 리뷰 보완 — 판단 이유와 로그 저장 실패 (2026-11-20)
 
 - 새 `LLM_DECISION`에는 노드에 따라 `intent_and_condition_extraction`, `tools_for_condition_verification`, `verified_facts_rendering` 코드가 저장된다. `REPLAN_STARTED`에는 `authorized_condition_relaxation`이 추가된다. 기존 정형 필드는 유지한다. 코드는 애플리케이션이 생성하며 자유 텍스트 판단 근거와 입력에서 주입된 코드는 저장하지 않는다. 이전 로그에는 코드가 없을 수 있다.
