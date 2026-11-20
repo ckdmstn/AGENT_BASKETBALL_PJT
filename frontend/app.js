@@ -439,3 +439,121 @@ byId("delete-plan").addEventListener("click", async () => {
 });
 loadPlans();
 
+const eventLabels = new Map(Object.entries({
+  NODE_STARTED: "단계 시작", NODE_COMPLETED: "단계 완료", TOOL_REQUESTED: "Tool 요청",
+  TOOL_RESPONDED: "Tool 응답", LLM_DECISION: "판단", REPLAN_STARTED: "재계획",
+  RUN_COMPLETED: "실행 완료", RUN_FAILED: "실행 실패",
+}));
+const nodeLabels = new Map(Object.entries({
+  analyze: "요청 분석", plan: "조회 계획", execute_tools: "경기·장소·날씨 조회",
+  evaluate: "조건 검증", replan: "조건 조정", respond: "응답 작성",
+}));
+const toolLabels = new Map(Object.entries({
+  search_kbl_games: "KBL 일정", get_kbl_game_detail: "경기 상세", search_arena: "경기장 검색", get_weather: "기상청 예보",
+}));
+const reasons = new Map(Object.entries({
+  intent_and_condition_extraction: "요청 의도와 조건을 추출했습니다.",
+  tools_for_condition_verification: "조건 검증에 필요한 Tool과 실행 순서를 선택했습니다.",
+  verified_facts_rendering: "검증된 정보로 응답을 작성했습니다.",
+  authorized_condition_relaxation: "사용자가 허용한 범위에서 조건을 조정했습니다.",
+}));
+let logListRequest = 0;
+let logDetailRequest = 0;
+
+function timelineEvent(event) {
+  const payload = event.payload ?? {};
+  const item = element("li", null, event.event_type === "REPLAN_STARTED" ? "replan" : "");
+  item.value = event.sequence_no;
+  const state = [];
+  if (payload.ok === true) state.push("성공");
+  if (payload.ok === false) state.push("실패");
+  if (payload.cached === true) state.push("캐시 재사용");
+  const title = [eventLabels.get(event.event_type) ?? "이벤트", nodeLabels.get(event.node_name),
+    toolLabels.get(event.tool_name), ...state].filter(Boolean).join(" · ");
+  item.append(element("strong", title), element("div", dateLabel(event.timestamp), "muted"));
+  const reason = reasons.get(payload.reason_code);
+  if (reason) item.append(element("div", reason));
+  else if (event.event_type === "LLM_DECISION" || event.event_type === "REPLAN_STARTED") {
+    item.append(element("div", "기록된 판단 사유를 표시할 수 없습니다.", "muted"));
+  }
+  if (Array.isArray(payload.tools)) {
+    const tools = payload.tools.map((name) => toolLabels.get(name)).filter(Boolean);
+    if (tools.length) item.append(element("div", "Tool 순서 " + tools.join(" · "), "muted"));
+  }
+  if (Number.isInteger(payload.attempt)) item.append(element("div", "재계획 " + payload.attempt + "회차"));
+  return item;
+}
+
+async function readLog(id) {
+  const request = ++logDetailRequest;
+  const panel = byId("log-detail");
+  notice("log-status", "");
+  panel.replaceChildren(element("p", "실행 기록을 불러오는 중…", "muted"));
+  try {
+    const result = await api("/api/logs/" + encodeURIComponent(id));
+    if (request !== logDetailRequest) return;
+    panel.replaceChildren(element("h3", "세션 " + result.session_id));
+    for (const run of result.runs) {
+      const detail = element("details");
+      const timeline = element("ol", null, "timeline");
+      for (const event of [...run.events].sort((a, b) => a.sequence_no - b.sequence_no)) {
+        timeline.append(timelineEvent(event));
+      }
+      detail.append(element("summary", "실행 " + run.run_id + " · 이벤트 " + run.events.length + "개"), timeline);
+      panel.append(detail);
+    }
+    if (panel.lastElementChild?.tagName === "DETAILS") panel.lastElementChild.open = true;
+  } catch (error) {
+    if (request !== logDetailRequest) return;
+    panel.replaceChildren();
+    notice("log-status", error.message, "error");
+  }
+}
+
+async function loadLogs() {
+  const request = ++logListRequest;
+  const list = byId("log-list");
+  if (!list.children.length) list.append(element("p", "실행 기록을 불러오는 중…", "muted"));
+  try {
+    const summaries = await api("/api/logs");
+    if (request !== logListRequest) return;
+    list.replaceChildren();
+    if (!summaries.length) list.append(element("p", "아직 저장된 실행 기록이 없습니다.", "empty"));
+    for (const summary of summaries) {
+      const id = summary.session_id;
+      const card = element("article", null, "entry");
+      const head = element("div", null, "section-head");
+      head.append(element("h3", id === sessionId ? "현재 채팅 세션" : "다른 채팅 세션"),
+        element("span", "실행 " + summary.run_count + "회 · 이벤트 " + summary.event_count + "개", "count"));
+      card.append(head, element("p", id, "muted"),
+        element("p", "마지막 이벤트 " + dateLabel(summary.last_event_at)));
+      const actions = element("div", null, "actions");
+      const remove = button("로그 삭제", async (trigger) => {
+        if (!confirm("이 세션의 실행 기록을 삭제할까요?")) return;
+        trigger.disabled = true;
+        try {
+          await api("/api/logs/" + encodeURIComponent(id), "DELETE");
+          ++logDetailRequest;
+          byId("log-detail").replaceChildren();
+          notice("log-status", "실행 기록을 삭제했습니다.");
+          await loadLogs();
+        } catch (error) {
+          notice("log-status", error.message, "error");
+        } finally {
+          trigger.disabled = false;
+        }
+      });
+      remove.classList.add("danger");
+      actions.append(button("실행 상세", () => readLog(id)), remove);
+      card.append(actions);
+      list.append(card);
+    }
+  } catch (error) {
+    if (request === logListRequest) list.replaceChildren(element("p", error.message, "notice error"));
+  }
+}
+
+document.addEventListener("chat-result", loadLogs);
+byId("refresh-logs").addEventListener("click", loadLogs);
+loadLogs();
+
