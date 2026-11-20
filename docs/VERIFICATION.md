@@ -1,5 +1,12 @@
 # 작업 01 검증 기록
 
+## Task 10 — 동일 경기 재저장 방지 및 목록 삭제 (2026-11-20 KST)
+
+- PR #18 병합을 포함한 `main`의 `63a246e` 기준 178개 통과. 변경 후 오프라인 `.\.venv\Scripts\python.exe -m pytest -q` **179 passed in 7.64s**. `pip check`, `node --check frontend/app.js`, Git 공백 검사 통과.
+- 임시 SQLite에서 동일 경기의 시작 시각이 달라도 409, 동시 요청은 201과 409 각 한 건, 기존 중복 레코드의 값 보존과 개별 수정·삭제를 확인했다. 다른 경기의 동일 절대 시작 시각, 기존 구간 충돌과 종료 경계, 메모 수정 시 기존 종료 시각 보존도 통과했다.
+- `node .verification/browser/plan-duplicate.cjs`로 Chromium 1440px·390px에서 409 안내 및 모달 유지, 목록 삭제 확인 취소, 중복 클릭 차단, 합성 503 후 복구, 삭제 성공 목록 갱신, 상세 모달 삭제와 다른 경기의 일정 경고를 확인했다. 추천·로그 회귀와 별도 `cards-permission.cjs` 권한·세션 스모크도 통과했다.
+- Chromium은 임시 SQLite와 Mock LLM·Tool을 사용했다. 기존 사용자 DB, 실제 외부 API·LLM과 Chromium 외 브라우저는 검증에 사용하지 않았다. UNIQUE 제약은 추가하지 않았으며 API 우회 쓰기는 중복 검사를 적용받지 않는다. 화면은 `.verification/browser/plan-duplicate-desktop.png`, `plan-duplicate-mobile.png`에 저장했다.
+
 ## Task 09 — 계획 저장 간소화 (2026-11-20 KST)
 
 - PR #16 병합을 포함한 `main`의 `0873e3a` 기준 174개 통과. 변경 후 `.\.venv\Scripts\python.exe -m pytest -q` **178 passed in 7.87s**. `pip check`, `node --check frontend/app.js`, Git 공백 검사도 통과했다.
