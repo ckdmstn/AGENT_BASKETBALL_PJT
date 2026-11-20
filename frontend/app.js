@@ -395,6 +395,16 @@ document.addEventListener("chat-result", ({ detail: response }) => {
 const planDialog = byId("plan-dialog");
 const planForm = byId("plan-form");
 const planNote = byId("plan-note");
+const planEdit = byId("plan-edit-fields");
+const planFields = {
+  home_team: byId("plan-home-team"),
+  away_team: byId("plan-away-team"),
+  start_at: byId("plan-start-at"),
+  venue_name: byId("plan-venue-name"),
+  venue_address: byId("plan-venue-address"),
+  note: planNote,
+};
+let originalPlanInputs = {};
 let selectedPlan = null;
 let planBusy = false;
 let planLoad = 0;
@@ -403,12 +413,23 @@ function openPlan(plan) {
   if (planDialog.open || planBusy) return;
   selectedPlan = plan;
   byId("plan-title").textContent = plan.id ? "저장한 계획 상세" : "직관 계획 저장";
+  byId("save-plan").textContent = plan.id ? "변경사항 저장" : "저장";
+  planEdit.hidden = !plan.id;
+  planEdit.disabled = !plan.id;
   const summary = byId("plan-summary");
-  summary.replaceChildren(element("h3", matchTitle(plan)),
-    element("p", dateLabel(plan.start_at) + " · " + plan.venue_name));
-  if (plan.venue_address) summary.append(element("p", plan.venue_address));
-  if (plan.id) summary.append(element("small", "저장 " + dateLabel(plan.created_at) + " · 수정 " + dateLabel(plan.updated_at)));
-  planNote.value = plan.note ?? "";
+  summary.replaceChildren();
+  if (plan.id) {
+    summary.append(element("small", "저장 " + dateLabel(plan.created_at) + " · 수정 " + dateLabel(plan.updated_at)));
+  } else {
+    summary.append(element("h3", matchTitle(plan)), element("p", dateLabel(plan.start_at) + " · " + plan.venue_name));
+    if (plan.venue_address) summary.append(element("p", plan.venue_address));
+  }
+  originalPlanInputs = {};
+  for (const [key, input] of Object.entries(planFields)) {
+    // Plans are returned in KST. Preserve original precision when the displayed time is unchanged.
+    input.value = key === "start_at" ? plan.start_at.slice(0, 19) : plan[key] ?? "";
+    originalPlanInputs[key] = input.value;
+  }
   byId("delete-plan").hidden = !plan.id;
   notice("plan-notice", "");
   notice("plan-error", "");
@@ -418,6 +439,27 @@ function openPlan(plan) {
 function setPlanBusy(value) {
   planBusy = value;
   for (const id of ["close-plan", "delete-plan", "save-plan", "plan-note"]) byId(id).disabled = value;
+  planEdit.disabled = value || planEdit.hidden;
+}
+
+function editedPlanFields(plan) {
+  const changes = {};
+  for (const [key, input] of Object.entries(planFields)) {
+    if (input.value === originalPlanInputs[key]) continue;
+    const value = input.value.trim() || null;
+    if (input.required && !value) {
+      input.focus();
+      throw new Error("홈팀, 원정팀, 시작 일시와 경기장명을 확인해 주세요.");
+    }
+    if (key === "start_at") {
+      const start = value + "+09:00";
+      if (!Number.isFinite(Date.parse(start))) throw new Error("시작 일시는 올바른 한국시간으로 입력해 주세요.");
+      changes[key] = start;
+    } else if (value !== (plan[key] ?? null)) {
+      changes[key] = value;
+    }
+  }
+  return changes;
 }
 
 async function loadPlans() {
@@ -473,13 +515,14 @@ planForm.addEventListener("submit", async (event) => {
   if (planBusy || !selectedPlan) return;
   const plan = selectedPlan;
   const note = planNote.value.trim() || null;
-  if (plan.id && (planNote.value === (plan.note ?? "") || note === (plan.note ?? null))) {
-    notice("plan-error", "변경된 항목이 없습니다.");
-    return;
-  }
-  setPlanBusy(true);
   try {
-    const saved = plan.id ? await api("/api/plans/" + plan.id, "PATCH", { note })
+    const changes = plan.id ? editedPlanFields(plan) : null;
+    if (changes && !Object.keys(changes).length) {
+      notice("plan-error", "변경된 항목이 없습니다.");
+      return;
+    }
+    setPlanBusy(true);
+    const saved = plan.id ? await api("/api/plans/" + plan.id, "PATCH", changes)
       : await api("/api/plans", "POST", { ...plan, end_at: null, note });
     planDialog.close();
     const confirmation = notice("plan-notice", plan.id ? "계획을 수정했습니다." : "계획을 저장했습니다.", "success");

@@ -77,6 +77,20 @@
     <form id="plan-form">
       <div class="section-head"><h2 id="plan-title">직관 계획</h2><button type="button" id="close-plan">닫기</button></div>
       <div id="plan-summary"></div>
+      <fieldset id="plan-edit-fields" class="plan-edit-fields" aria-describedby="plan-edit-help" hidden disabled>
+        <legend>개인 직관 계획</legend>
+        <p id="plan-edit-help" class="muted">수정한 값은 이 개인 계획에만 적용됩니다. KBL 공식 경기 정보와 경기 식별자는 그대로입니다. 다른 경기라면 새 추천에서 계획을 저장하세요.</p>
+        <div class="plan-edit-grid">
+          <div><label for="plan-home-team">홈팀</label><input id="plan-home-team" required></div>
+          <div><label for="plan-away-team">원정팀</label><input id="plan-away-team" required></div>
+        </div>
+        <label for="plan-start-at">시작 일시 (한국시간)</label>
+        <input id="plan-start-at" type="datetime-local" step="1" required>
+        <label for="plan-venue-name">경기장명</label>
+        <input id="plan-venue-name" required>
+        <label for="plan-venue-address">경기장 주소 (선택)</label>
+        <input id="plan-venue-address">
+      </fieldset>
       <label for="plan-note">메모 (선택)</label>
       <textarea id="plan-note" rows="3"></textarea>
       <p id="plan-error" role="alert" class="notice" hidden></p>
