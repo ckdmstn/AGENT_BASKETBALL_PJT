@@ -12,10 +12,12 @@ from backend.agent.sessions import SQLiteSessions
 from backend.agent.state import ChatRequest, ChatResponse
 from backend.config import load_settings
 from backend.database import Database, get_database
+from backend.logs import router as logs_router
 from backend.plans import router as plans_router
 
 app = FastAPI(title='KBL GO', version='0.2.0', description='LangGraph KBL 직관 추천 Agent')
 app.include_router(plans_router)
+app.include_router(logs_router)
 
 
 @lru_cache
