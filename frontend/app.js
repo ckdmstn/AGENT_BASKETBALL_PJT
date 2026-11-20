@@ -255,12 +255,13 @@ function conditionLabel(key, value) {
   return String(value);
 }
 
-function conditionList(title, values) {
+function conditionList(title, values, includeCleared = false) {
   const group = element("div");
   const list = element("ul");
   for (const [key, value] of Object.entries(values)) {
-    if (fieldLabels.has(key) && value != null && (!Array.isArray(value) || value.length)) {
-      list.append(element("li", fieldLabels.get(key) + " · " + conditionLabel(key, value)));
+    if (fieldLabels.has(key) && (includeCleared || (value != null && (!Array.isArray(value) || value.length)))) {
+      const label = includeCleared && value == null ? "조건 해제" : conditionLabel(key, value);
+      list.append(element("li", fieldLabels.get(key) + " · " + label));
     }
   }
   group.append(element("h4", title), list.children.length ? list : element("p", "지정된 조건 없음", "muted"));
@@ -294,7 +295,7 @@ document.addEventListener("chat-result", ({ detail: response }) => {
     conditionList("실제 적용된 조건", response.active_conditions));
   conditions.append(element("summary", "요청 조건 및 재계획 " + response.replan_count + "회"), grid);
   for (const step of response.relaxation_history) {
-    conditions.append(conditionList("재계획 " + step.attempt + "회차", step.changes));
+    conditions.append(conditionList("재계획 " + step.attempt + "회차", step.changes, true));
   }
   results.append(conditions);
 
