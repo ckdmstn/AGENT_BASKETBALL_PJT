@@ -37,6 +37,28 @@ def test_withdrawal_wins_even_when_llm_omits_or_misreads_it():
     assert not r.conditions.fallback_teams_allowed and r.replan_count==0
 
 
+def test_permission_only_turns_preserve_filters_if_model_misclassifies():
+    agent = runner([analysis(preferred_team='LG', region='서울'), {'intent': 'greeting'}, {'intent': 'help'}])
+    original = agent.run('서울에서 LG 경기 추천', 'button-session')
+    granted = agent.run('다른 팀도 괜찮아.', 'button-session')
+    revoked = agent.run('다른 팀은 안 돼.', 'button-session')
+    assert original.team_permission == 'denied'
+    assert granted.team_permission == 'allowed'
+    assert granted.conditions.preferred_team == 'LG'
+    assert granted.active_conditions.preferred_team is None
+    assert granted.conditions.date_range == original.conditions.date_range
+    assert revoked.conditions == original.conditions
+    assert revoked.team_permission == 'denied' and revoked.replan_count == 0
+
+
+def test_ambiguous_message_returns_confirmation_required_without_permission():
+    agent = runner([analysis(preferred_team='LG', fallback_teams_allowed=True)])
+    response = agent.run('서울에서 LG 경기 추천해줘 없으면 다른 팀도 괜찮아', 'ambiguous')
+    assert response.team_permission == 'confirmation_required'
+    assert not response.conditions.fallback_teams_allowed and response.replan_count == 0
+    assert not agent.sessions.load('ambiguous')['permissions']['team']
+
+
 def test_unverified_legacy_session_flag_is_not_authority():
     from backend.agent.state import Conditions
     a=runner([{'intent':'follow_up','conditions':{'preferred_team':'DB'},'changed_fields':['preferred_team']}])

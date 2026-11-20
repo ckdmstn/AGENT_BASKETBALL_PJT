@@ -36,6 +36,7 @@ button, nav a {
   border: 1px solid var(--border); background: var(--surface); color: inherit; cursor: pointer;
 }
 button:hover:not(:disabled), nav a:hover { background: var(--soft); }
+button:active:not(:disabled), nav a:active { border-color: var(--primary); }
 button:disabled { opacity: .48; cursor: not-allowed; }
 :focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
 [hidden] { display: none !important; }
@@ -79,6 +80,7 @@ textarea { resize: vertical; }
 .composer { margin-top: .55rem; }
 .primary { color: var(--surface); background: var(--primary); border-color: var(--primary); font-weight: 800; }
 .primary:hover:not(:disabled) { background: var(--primary-hover); }
+.primary:active:not(:disabled) { background: var(--primary-hover); box-shadow: inset 0 0 0 1px var(--surface); }
 .danger { color: var(--error-text); }
 .notice { padding: .7rem .85rem; background: var(--soft); border-left: .25rem solid var(--primary); border-radius: .35rem; overflow-wrap: anywhere; }
 .notice.error { background: var(--error-bg); border-color: var(--error-border); }
