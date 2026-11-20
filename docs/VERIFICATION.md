@@ -1,5 +1,12 @@
 # 작업 01 검증 기록
 
+## Task 06 — 딥 네이비 및 팀 완화 권한 (2026-11-20 KST)
+
+- PR #10 병합을 포함한 `main`의 `ea32c1e`에서 시작했다. 변경 전 pytest 147개, 변경 후 `.\.venv\Scripts\python.exe -m pytest -q` **149 passed in 4.71s**. 기존 SQLite 철회 테스트에도 응답 상태 확인을 추가했다. `pip check`, `node --check frontend/app.js`, Git 공백 검사 통과.
+- Chromium 권한 스모크 `node .verification/browser/permission.cjs`에서는 초기 미허용, 모호한 표현 확인 요청, 독립 허용·철회 메시지, 대기 중 잠금과 초안 보존, 직접 입력, 503 후 상태 미확인·재시도, 새 대화 분리, 새로고침·동일 DB 서버 재시작 후 상태 확인을 검증했다. 허용됐지만 실제 완화하지 않은 실행과 팀 조건을 해제한 실행을 구분했다.
+- 1440px와 390px에서 빈 결과·추천 카드 두 건·계획 모달·로그 타임라인을 확인했다. 키보드 Tab과 Enter로 권한 버튼을 선택·실행했고 포커스 표시를 확인했다. 흰색과 딥 네이비 버튼은 13.75:1, 연한 채팅 배경과 본문은 13.26:1, 밝은 전체 배경과 강조 보조 텍스트는 5.82:1이다. 전체 접근성 감사는 수행하지 않았다.
+- 기존 `node .verification/browser/smoke.cjs`도 통과했다. 두 브라우저 검증 모두 임시 SQLite와 Mock LLM 및 Tool을 사용했으며 실제 외부 API와 LLM은 재호출하지 않았다. 최종 화면은 `.verification/deep-navy-WnCcDN/desktop.png`와 `mobile.png`에 보관했다.
+
 ## Task 05 — 실제 통합 검증 (2026-11-20 KST)
 
 기준은 PR #8 병합 커밋 `136c7a1`의 `origin/main`이다. Python 3.12.10을 사용했다. Kakao·KMA·LLM에 필요한 환경변수의 설정 여부를 확인했고 값은 공개하지 않았다. 로컬 FastAPI와 실제 LLM·Tool을 사용한 Chromium 실행에 별도 SQLite 파일을 연결했다.
