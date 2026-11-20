@@ -29,9 +29,10 @@ def build_graph(nodes: Nodes):
 
 
 class AgentRunner:
-    def __init__(self, llm=None, tool_invoker=None, settings=None, sessions=None):
+    def __init__(self, llm=None, tool_invoker=None, settings=None, sessions=None, *, event_subscriber=None):
         self.settings = settings or load_settings()
         self.sessions = sessions or MemorySessions()
+        self.event_subscriber = event_subscriber
         self.graph = build_graph(Nodes(llm or JsonLLM(self.settings), self.settings, tool_invoker or invoke))
 
     def run(self, message: str, session_id: str | None = None) -> ChatResponse:
@@ -45,6 +46,8 @@ class AgentRunner:
                 self.sessions.restrict_permissions(sid, checked)
                 previous = self.sessions.load(sid)
             bus = EventBus(sid, rid)
+            if self.event_subscriber is not None:
+                bus.subscribe(self.event_subscriber)
             conditions = Conditions().model_dump(mode='json')
             state = AgentState(session_id=sid, run_id=rid, user_message=request.message, intent='plan',
                                conditions=conditions, active_conditions=conditions.copy(),

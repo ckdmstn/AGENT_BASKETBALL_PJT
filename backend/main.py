@@ -1,4 +1,5 @@
 from functools import lru_cache
+from sqlite3 import Error as SQLiteError
 
 from fastapi import Depends, FastAPI
 from fastapi.exceptions import RequestValidationError
@@ -6,14 +7,28 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from backend.agent.graph import AgentRunner
+from backend.agent.logging import LoggingAgent
+from backend.agent.sessions import SQLiteSessions
 from backend.agent.state import ChatRequest, ChatResponse
+from backend.config import load_settings
+from backend.database import Database, get_database
+from backend.logs import router as logs_router
+from backend.plans import router as plans_router
 
 app = FastAPI(title='KBL GO', version='0.2.0', description='LangGraph KBL 직관 추천 Agent')
+app.include_router(plans_router)
+app.include_router(logs_router)
 
 
 @lru_cache
-def get_agent_runner() -> AgentRunner:
-    return AgentRunner()
+def get_agent_runner(db: Database = Depends(get_database)) -> AgentRunner:
+    settings = load_settings()
+    return AgentRunner(settings=settings, sessions=SQLiteSessions(db), event_subscriber=LoggingAgent(db, settings))
+
+
+@app.exception_handler(SQLiteError)
+async def database_error(_request, _exc):
+    return JSONResponse(status_code=503, content={'detail': '저장소를 사용할 수 없습니다.'})
 
 
 @app.exception_handler(RequestValidationError)

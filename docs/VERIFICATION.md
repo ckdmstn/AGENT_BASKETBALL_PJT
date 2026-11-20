@@ -1,5 +1,25 @@
 # 작업 01 검증 기록
 
+## PR #6 리뷰 보완 — 판단 이유와 로그 저장 실패 (2026-11-20)
+
+- 새 `LLM_DECISION`에는 노드에 따라 `intent_and_condition_extraction`, `tools_for_condition_verification`, `verified_facts_rendering` 코드가 저장된다. `REPLAN_STARTED`에는 `authorized_condition_relaxation`이 추가된다. 기존 정형 필드는 유지한다. 코드는 애플리케이션이 생성하며 자유 텍스트 판단 근거와 입력에서 주입된 코드는 저장하지 않는다. 이전 로그에는 코드가 없을 수 있다.
+- SQLite 이벤트 쓰기가 실패하면 표준 로거에 고정 WARNING을 남긴다. 경고에는 식별자·payload·예외 원문·traceback이 없다. 해당 이벤트는 누락될 수 있으며 자동 재시도와 DB 재기록은 없다. 경고는 누락 발생을 알려주며 이벤트별 추적 정보는 제공하지 않는다.
+- 기존 저장 실패 테스트에 고정 경고와 예외 비노출 검증을 추가했다. 신규 테스트 1개는 계획·응답·재계획 이벤트에 주입된 자유 텍스트 및 코드가 저장되지 않는지 확인한다.
+- `.\.venv\Scripts\python.exe -m pytest -q`는 **143 passed in 9.11s**였다. 기존 142개를 유지했다. `.\.venv\Scripts\python.exe -m pip check`는 `No broken requirements found.`를 반환했다. 실제 외부 API와 LLM은 재호출하지 않았다.
+
+## Task 03 — SQLite 계획 CRUD·세션·Logging Agent (2026-11-20)
+
+| 검증 | 결과 |
+| --- | --- |
+| 변경 전 `.\.venv\Scripts\python.exe -m pytest -q` | 116 passed |
+| 구현 후 동일 명령 | **142 passed in 10.18s**. 기존 116개 유지 및 신규 26개 |
+| `.\.venv\Scripts\python.exe -m pip check` | No broken requirements found |
+
+- 임시 SQLite 초기화와 재초기화, 계획 CRUD 상태 코드, 잘못된 시각·필드의 422, 부분 수정 또는 명시적 null, KST 중복·경계 및 동시 생성, 종료 시각 누락 경고를 확인했다.
+- 같은 DB를 여는 새 Runner에서 원조건·추천 요약·검증 권한을 복원했다. 사용자별 세션 격리와 팀·대체 날짜 권한의 철회가 분석 및 계획 단계의 LLM 실패 뒤에도 보존되는지 확인했다.
+- 로그 API의 실행 구분과 이벤트 순서, 저장 실패 또는 구독 해제 이후 추천 성공, 실패 실행 기록, 합성 인증키·대화 원문·원본 예외 비저장, 삭제 후 계획·대화 세션 및 타 세션 로그 보존을 확인했다.
+- FastAPI TestClient로 채팅 연동, `/docs`와 `/openapi.json` 경로 등록을 확인했다. 추적을 비활성화하고 Tool 및 LLM을 모의 실행했다. 실제 LLM이나 KBL·카카오·기상청 API 호출과 다중 worker 환경은 이번 검증에 포함하지 않았다.
+
 ## PR #4 최종 보완 — 권한 검증 최신 결과 (2026-11-19)
 
 실제 LLM/KBL/Kakao/KMA API **재호출 없음**. 아래 이전 통합 결과는 당시 실행 이력이며 이번에는 잘못된 합성 LLM 출력·Tool mock으로 권한 검증을 재현했다.
